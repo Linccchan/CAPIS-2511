@@ -77,12 +77,20 @@ export default function CustomerDashboard() {
         </div>
         <p className="text-xs text-gray-400 uppercase mb-2">My Account</p>
         <nav className="flex flex-col gap-1">
-          {['Dashboard', 'My Orders', 'Place New Order', 'Documents', 'Profile & Settings'].map((item) => (
+          {[
+            { label: 'Dashboard', path: '/customer/dashboard' },
+            { label: 'My Orders', path: '/customer/orders' },
+            { label: 'Product Catalog', path: '/customer/catalog' },
+            { label: 'Request Quotation', path: '/customer/quotation/new' },
+            { label: 'Documents', path: '/customer/documents' },
+            { label: 'Profile & Settings', path: '/customer/profile' },
+          ].map((item) => (
             <button
-              key={item}
-              className={`text-left text-sm px-3 py-2 rounded ${item === 'Dashboard' ? 'font-semibold text-black' : 'text-gray-600 hover:bg-gray-100'}`}
+              key={item.label}
+              onClick={() => router.push(item.path)}
+              className={`text-left text-sm px-3 py-2 rounded ${item.label === 'Dashboard' ? 'font-semibold text-black bg-gray-50' : 'text-gray-600 hover:bg-gray-100'}`}
             >
-              • {item}
+              • {item.label}
             </button>
           ))}
         </nav>
@@ -99,7 +107,10 @@ export default function CustomerDashboard() {
             </h1>
             <p className="text-sm text-gray-500">Here's the status of your current orders.</p>
           </div>
-          <button className="bg-black text-white text-sm px-4 py-2 rounded hover:bg-gray-800">
+          <button
+            onClick={() => router.push('/customer/quotation/new')}
+            className="bg-black text-white text-sm px-4 py-2 rounded hover:bg-gray-800"
+          >
             + Place new order
           </button>
         </div>
