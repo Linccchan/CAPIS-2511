@@ -25,13 +25,34 @@ export default function OrderManagementDashboard() {
 
   const summary = data?.summary || {}
 
+  const quickLinks = [
+    {
+      title: 'Customer Orders',
+      description: 'Review export orders, fulfillment status, and customer shipment needs.',
+      href: '/order-management/customer-orders',
+      action: 'Open orders',
+    },
+    {
+      title: 'Purchase Orders',
+      description: 'Track supplier purchase orders, expected dates, and delivery progress.',
+      href: '/order-management/purchase-orders',
+      action: 'View purchase orders',
+    },
+    {
+      title: 'Supplier Deliveries',
+      description: 'Monitor received quantities and exceptions before shipment readiness.',
+      href: '/order-management/supplier-deliveries',
+      action: 'Check deliveries',
+    },
+  ]
+
   return (
     <OrderShell
       title="Order Management"
       description="Monitor customer export orders, supplier purchase orders, and delivery readiness."
     >
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <StatCard label="Total Customer Orders" value={loading ? '-' : summary.totalCustomerOrders} />
           <StatCard label="Pending Orders" value={loading ? '-' : summary.pendingOrders} />
           <StatCard label="Orders in Progress" value={loading ? '-' : summary.ordersInProgress} />
@@ -40,8 +61,27 @@ export default function OrderManagementDashboard() {
           <StatCard label="Supplier Deliveries Pending" value={loading ? '-' : summary.supplierDeliveriesPending} />
         </div>
 
+        <Card title="Order Management Workspaces">
+          <div className="divide-y divide-gray-100">
+            {quickLinks.map((item) => (
+              <div key={item.title} className="flex flex-col gap-4 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">{item.title}</h3>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-500">{item.description}</p>
+                </div>
+                <Link href={item.href} className="text-sm font-medium text-gray-900 hover:underline">
+                  {item.action}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </Card>
+
         <div className="grid gap-6 xl:grid-cols-2">
-          <Card title="Recent Customer Orders">
+          <Card
+            title="Recent Customer Orders"
+            action={<Link href="/order-management/customer-orders" className="text-sm font-medium text-gray-900 hover:underline">See all</Link>}
+          >
             {loading ? <TableSkeleton cols={5} /> : data.customerOrders.length === 0 ? (
               <EmptyState title="No customer orders" />
             ) : (
@@ -72,7 +112,10 @@ export default function OrderManagementDashboard() {
             )}
           </Card>
 
-          <Card title="Recent Purchase Orders">
+          <Card
+            title="Recent Purchase Orders"
+            action={<Link href="/order-management/purchase-orders" className="text-sm font-medium text-gray-900 hover:underline">See all</Link>}
+          >
             {loading ? <TableSkeleton cols={5} /> : data.purchaseOrders.length === 0 ? (
               <EmptyState title="No purchase orders" />
             ) : (
@@ -104,7 +147,10 @@ export default function OrderManagementDashboard() {
           </Card>
         </div>
 
-        <Card title="Supplier Delivery Progress">
+        <Card
+          title="Supplier Delivery Progress"
+          action={<Link href="/order-management/supplier-deliveries" className="text-sm font-medium text-gray-900 hover:underline">See all</Link>}
+        >
           {loading ? <TableSkeleton cols={6} /> : data.supplierDeliveries.length === 0 ? (
             <EmptyState title="No supplier deliveries" />
           ) : (
