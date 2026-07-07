@@ -150,7 +150,7 @@ export function buildOrderManagementData(raw) {
     const customer = customerById.get(String(first(order, ['customer_id'])))
     const items = (orderItemsByCustomerOrder.get(String(orderId)) || []).map((item) => {
       const product = productById.get(String(first(item, ['product_id'])))
-      const quantity = numberOf(first(item, ['quantity', 'ordered_quantity', 'qty'], 0))
+      const quantity = numberOf(first(item, ['quantity_ordered', 'quantity', 'ordered_quantity', 'qty'], 0))
       const unitPrice = numberOf(first(item, ['unit_price', 'price'], 0))
 
       return {
@@ -180,7 +180,7 @@ export function buildOrderManagementData(raw) {
       customerName: first(customer, ['name', 'customer_name', 'company_name'], first(order, ['customer_name'], 'Customer')),
       contactInfo: first(customer, ['contact_info', 'email', 'phone', 'contact_number'], 'Not set'),
       orderDate: first(order, ['order_date', 'created_at', 'date']),
-      expectedShipmentDate: first(order, ['expected_shipment_date', 'shipment_date', 'required_date']),
+      expectedShipmentDate: first(order, ['expected_shipment_date', 'estimated_ready_date', 'shipment_date', 'required_date']),
       status: normalizeStatus(first(order, ['status'], completionStatus)),
       totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
       items,
@@ -220,16 +220,39 @@ export function buildOrderManagementData(raw) {
 }
 
 export async function createRecord(table, payload) {
-  const { error } = await supabase.from(table).insert(payload)
-  if (error) throw new Error(error.message)
+  return writeRecord(payload, (nextPayload) => supabase.from(table).insert(nextPayload))
 }
 
 export async function updateRecord(table, id, payload) {
-  const { error } = await supabase.from(table).update(payload).eq('id', id)
-  if (error) throw new Error(error.message)
+  return writeRecord(payload, (nextPayload) => supabase.from(table).update(nextPayload).eq('id', id))
 }
 
 export async function deleteRecord(table, id) {
   const { error } = await supabase.from(table).delete().eq('id', id)
   if (error) throw new Error(error.message)
+}
+
+const missingColumnFrom = (message) => {
+  const match = String(message || '').match(/Could not find the '([^']+)' column/)
+  return match?.[1]
+}
+
+async function writeRecord(payload, write) {
+  const nextPayload = { ...payload }
+  const skippedColumns = []
+
+  while (Object.keys(nextPayload).length > 0) {
+    const { error } = await write(nextPayload)
+    if (!error) return { skippedColumns }
+
+    const missingColumn = missingColumnFrom(error.message)
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      throw new Error(error.message)
+    }
+
+    delete nextPayload[missingColumn]
+    skippedColumns.push(missingColumn)
+  }
+
+  throw new Error('No valid columns were available to save this record.')
 }

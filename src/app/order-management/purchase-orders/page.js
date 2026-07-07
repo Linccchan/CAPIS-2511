@@ -76,12 +76,13 @@ export default function PurchaseOrdersPage() {
     setSaving(true)
     try {
       const payload = Object.fromEntries(Object.entries(form).filter(([, value]) => value !== ''))
+      let result
       if (editing) {
-        await updateRecord('purchase_orders', editing.id, payload)
-        toast?.show('Purchase order updated.')
+        result = await updateRecord('purchase_orders', editing.id, payload)
+        toast?.show(result.skippedColumns.length ? `Purchase order updated. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Purchase order updated.')
       } else {
-        await createRecord('purchase_orders', payload)
-        toast?.show('Purchase order created.')
+        result = await createRecord('purchase_orders', payload)
+        toast?.show(result.skippedColumns.length ? `Purchase order created. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Purchase order created.')
       }
       resetForm()
       await refresh()

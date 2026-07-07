@@ -3,32 +3,89 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { fetchOrderManagementData, formatDate, money } from '@/lib/orderManagement'
-import { Badge, Card, EmptyState, OrderShell, ProgressBar, TableSkeleton, statusTone, useToast } from '@/components/order-management/ui'
+import { createRecord, fetchOrderManagementData, formatDate, money } from '@/lib/orderManagement'
+import { Badge, Button, Card, EmptyState, OrderShell, ProgressBar, TableSkeleton, statusTone, useToast } from '@/components/order-management/ui'
+
+const blankItemForm = {
+  product_id: '',
+  quantity_ordered: '1',
+  unit_price: '',
+  notes: '',
+}
 
 export default function CustomerOrderDetailsPage() {
   const params = useParams()
   const toast = useToast()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [savingItem, setSavingItem] = useState(false)
+  const [itemForm, setItemForm] = useState(blankItemForm)
+
+  const refresh = async () => {
+    try {
+      setData(await fetchOrderManagementData())
+    } catch (error) {
+      toast?.show(error.message, 'error')
+    }
+  }
 
   useEffect(() => {
-    const load = async () => {
+    let active = true
+    const loadInitialData = async () => {
       try {
-        setData(await fetchOrderManagementData())
+        const nextData = await fetchOrderManagementData()
+        if (active) setData(nextData)
       } catch (error) {
-        toast?.show(error.message, 'error')
+        if (active) toast?.show(error.message, 'error')
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
-    load()
+    loadInitialData()
+    return () => {
+      active = false
+    }
   }, [toast])
 
   const order = useMemo(
     () => (data?.customerOrders || []).find((item) => String(item.id) === String(params.id)),
     [data, params.id],
   )
+
+  const addItem = async (event) => {
+    event.preventDefault()
+    if (!order) return
+
+    if (!itemForm.product_id) {
+      toast?.show('Select a product before adding an item.', 'error')
+      return
+    }
+
+    const quantity = Number(itemForm.quantity_ordered)
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      toast?.show('Quantity must be greater than zero.', 'error')
+      return
+    }
+
+    setSavingItem(true)
+    try {
+      const payload = {
+        order_id: order.id,
+        product_id: itemForm.product_id,
+        quantity_ordered: quantity,
+        unit_price: itemForm.unit_price === '' ? 0 : Number(itemForm.unit_price),
+        notes: itemForm.notes,
+      }
+      const result = await createRecord('customer_order_items', Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== '')))
+      setItemForm(blankItemForm)
+      await refresh()
+      toast?.show(result.skippedColumns.length ? `Item added. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Item added.')
+    } catch (error) {
+      toast?.show(error.message, 'error')
+    } finally {
+      setSavingItem(false)
+    }
+  }
 
   return (
     <OrderShell title="Order Details" description="Customer information, ordered products, supplier progress, and shipment readiness.">
@@ -97,6 +154,18 @@ export default function CustomerOrderDetailsPage() {
           </div>
 
           <Card title="Ordered Products">
+            <form onSubmit={addItem} className="mb-5 grid gap-3 rounded border border-gray-200 bg-gray-50 p-4 lg:grid-cols-[1fr_120px_140px_1fr_auto]">
+              <select value={itemForm.product_id} onChange={(event) => setItemForm({ ...itemForm, product_id: event.target.value })} className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
+                <option value="">Select product</option>
+                {(data?.products || []).map((product) => (
+                  <option key={product.id} value={product.id}>{product.product_name || product.name || product.sku || product.id}</option>
+                ))}
+              </select>
+              <input type="number" min="1" value={itemForm.quantity_ordered} onChange={(event) => setItemForm({ ...itemForm, quantity_ordered: event.target.value })} placeholder="Qty" className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
+              <input type="number" min="0" step="0.01" value={itemForm.unit_price} onChange={(event) => setItemForm({ ...itemForm, unit_price: event.target.value })} placeholder="Unit price" className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
+              <input value={itemForm.notes} onChange={(event) => setItemForm({ ...itemForm, notes: event.target.value })} placeholder="Notes" className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
+              <Button disabled={savingItem}>{savingItem ? 'Adding...' : 'Add Item'}</Button>
+            </form>
             {order.items.length === 0 ? (
               <EmptyState title="No ordered products" />
             ) : (
