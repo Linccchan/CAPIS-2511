@@ -3,15 +3,21 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { createRecord, deleteRecord, fetchOrderManagementData, formatDate, updateRecord } from '@/lib/orderManagement'
+import { supabase } from '@/lib/supabaseClient'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, OrderShell, TableSkeleton, statusTone, useToast } from '@/components/order-management/ui'
 
 const blankForm = {
   order_number: '',
   customer_id: '',
+  destination_country: '',
   order_date: '',
-  expected_shipment_date: '',
-  status: 'Pending',
+  estimated_ready_date: '',
+  status: 'submitted',
 }
+
+const customerOrderStatuses = [
+  { value: 'submitted', label: 'Submitted' },
+]
 
 export default function CustomerOrdersPage() {
   const toast = useToast()
@@ -64,9 +70,10 @@ export default function CustomerOrdersPage() {
     setForm({
       order_number: order.orderNumber,
       customer_id: order.customer_id || '',
+      destination_country: order.destination_country || '',
       order_date: order.orderDate ? String(order.orderDate).slice(0, 10) : '',
-      expected_shipment_date: order.expectedShipmentDate ? String(order.expectedShipmentDate).slice(0, 10) : '',
-      status: order.status,
+      estimated_ready_date: order.expectedShipmentDate ? String(order.expectedShipmentDate).slice(0, 10) : '',
+      status: order.status?.toLowerCase() || 'submitted',
     })
   }
 
@@ -80,12 +87,15 @@ export default function CustomerOrdersPage() {
     setSaving(true)
     try {
       const payload = Object.fromEntries(Object.entries(form).filter(([, value]) => value !== ''))
+      let result
       if (editing) {
-        await updateRecord('customer_orders', editing.id, payload)
-        toast?.show('Customer order updated.')
+        result = await updateRecord('customer_orders', editing.id, payload)
+        toast?.show(result.skippedColumns.length ? `Customer order updated. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Customer order updated.')
       } else {
-        await createRecord('customer_orders', payload)
-        toast?.show('Customer order created.')
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData?.user?.id) payload.created_by = userData.user.id
+        result = await createRecord('customer_orders', payload)
+        toast?.show(result.skippedColumns.length ? `Customer order created. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Customer order created.')
       }
       resetForm()
       await refresh()
@@ -118,9 +128,9 @@ export default function CustomerOrdersPage() {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search orders or customers" className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400 sm:max-w-xs" />
             <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
               <option value="all">All statuses</option>
-              <option value="pending">Pending</option>
-              <option value="processing">Processing</option>
-              <option value="completed">Completed</option>
+              {customerOrderStatuses.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
             </select>
           </div>
 
@@ -180,15 +190,17 @@ export default function CustomerOrdersPage() {
             <label className="block text-sm font-medium text-gray-700">Order Date
               <input type="date" value={form.order_date} onChange={(event) => setForm({ ...form, order_date: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
             </label>
-            <label className="block text-sm font-medium text-gray-700">Expected Shipment Date
-              <input type="date" value={form.expected_shipment_date} onChange={(event) => setForm({ ...form, expected_shipment_date: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
+            <label className="block text-sm font-medium text-gray-700">Destination Country
+              <input value={form.destination_country} onChange={(event) => setForm({ ...form, destination_country: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
+            </label>
+            <label className="block text-sm font-medium text-gray-700">Estimated Ready Date
+              <input type="date" value={form.estimated_ready_date} onChange={(event) => setForm({ ...form, estimated_ready_date: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
             </label>
             <label className="block text-sm font-medium text-gray-700">Status
               <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
-                <option>Pending</option>
-                <option>Processing</option>
-                <option>Completed</option>
-                <option>Ready for Shipment</option>
+                {customerOrderStatuses.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </select>
             </label>
             <div className="flex gap-2">

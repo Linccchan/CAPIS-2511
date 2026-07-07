@@ -4,8 +4,8 @@ import Link from 'next/link'
 const metrics = [
   { label: 'Active Orders', value: '128', change: '+12 this week' },
   { label: 'Pending Approvals', value: '18', change: '6 require review' },
-  { label: 'Supplier Deliveries', value: '42', change: '9 due today' },
-  { label: 'Ready Shipments', value: '24', change: '+4 from yesterday' },
+  { label: 'Purchase Orders', value: '42', change: '9 due today' },
+  { label: 'Ready Orders', value: '24', change: '+4 from yesterday' },
 ]
 
 const modules = [
@@ -15,24 +15,12 @@ const modules = [
     href: '/order-management',
     action: 'Open module',
   },
-  {
-    title: 'Warehouse',
-    description: 'Review inventory batches, receiving updates, and shipment preparation.',
-    href: '/warehouse/dashboard',
-    action: 'View queue',
-  },
-  {
-    title: 'Supplier Portal',
-    description: 'Monitor incoming supplier confirmations and delivery exceptions.',
-    href: '/supplier/dashboard',
-    action: 'Check status',
-  },
 ]
 
 const activity = [
   { id: 'CO-1048', customer: 'Maritime Foods Co.', owner: 'Order Management', status: 'Awaiting Supplier', tone: 'amber' },
-  { id: 'PO-2216', customer: 'Pacific Packaging', owner: 'Supplier Portal', status: 'Partially Delivered', tone: 'gray' },
-  { id: 'SH-0912', customer: 'Northline Export', owner: 'Warehouse', status: 'Ready', tone: 'green' },
+  { id: 'PO-2216', customer: 'Pacific Packaging', owner: 'Order Management', status: 'Partially Delivered', tone: 'gray' },
+  { id: 'SH-0912', customer: 'Northline Export', owner: 'Order Management', status: 'Ready', tone: 'green' },
   { id: 'CO-1045', customer: 'Davao Specialty Goods', owner: 'Admin Review', status: 'Needs Approval', tone: 'black' },
 ]
 
