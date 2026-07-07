@@ -34,11 +34,14 @@ export default function LoginPage() {
       .eq('id', data.user.id)
       .single()
 
-    if (profile?.role === 'admin') router.push('/admin/dashboard')
-    else if (profile?.role === 'warehouse') router.push('/warehouse/dashboard')
-    else if (profile?.role === 'supplier') router.push('/supplier/dashboard')
-    else if (profile?.role === 'executive') router.push('/executive/dashboard')
-    else router.push('/customer/dashboard')
+    if (profile?.role === 'admin') {
+      router.push('/admin/dashboard')
+    } else {
+      await supabase.auth.signOut()
+      setError('This account does not have access to the admin dashboard.')
+      setLoading(false)
+      return
+    }
 
     setLoading(false)
   }
