@@ -26,41 +26,53 @@ known gaps between the code and the database.
 - Every primary key is `id uuid default gen_random_uuid()` (except `profiles.id`,
   which equals the Supabase `auth.users` id).
 - Audit columns are `timestamptz default now()`.
-- **No Postgres enums** — all statuses are free-text `text` with a default.
+- **No Postgres enums, but statuses are NOT free text** — every status/role/type
+  column is vocabulary-enforced by a CHECK constraint (verified from
+  `pg_constraint`, 2026-07-09; full DDL at the end of `schema.sql`). Writing any
+  other value fails with a `23514` check-violation error.
 
 ## Roles
 
-`profiles.role` is free text. The canonical set (enforced only in RLS helper
-functions, not by a constraint) is:
+`profiles.role` is enforced by `profiles_role_check`:
 
 `admin` · `sales` · `management` · `procurement` · `warehouse` · `customer`
 
-> Suppliers are **not** system users — they receive POs by email (matches the
-> proposal). There is a `suppliers` table but no `supplier` login role.
+> There is a `suppliers` table but no `supplier` login role. The wireframes
+> include a supplier portal, so when that module is built the
+> `profiles_role_check` constraint must be altered to allow `'supplier'`.
 
-## Status columns & defaults
+## Status columns — allowed values (CHECK-enforced) & defaults
 
-| Table | Column | Default |
-|-------|--------|---------|
-| `customer_orders` | `status` | `draft` |
-| `purchase_orders` | `status` | `draft` |
-| `billings` | `billing_status` | `pending` |
-| `payments` | `status` | `pending` |
-| `documents` | `status` | `uploaded` |
-| `labeling_tasks` | `status` | `pending` |
-| `staging_tasks` | `status` | `pending` |
-| `shipments` | `status` | `planning` |
-| `supplier_deliveries` | `delivery_status` | `received` |
-| `supplier_delivery_items` | `condition_status` | `good` |
+| Table | Column | Allowed values (default in **bold**) |
+|-------|--------|--------------------------------------|
+| `customer_orders` | `status` | **draft**, submitted, awaiting_down_payment, payment_verified, procurement_started, partially_received, warehouse_preparation, ready_for_shipment, shipped, completed, cancelled |
+| `purchase_orders` | `status` | **draft**, sent, partially_delivered, delivered, cancelled |
+| `billings` | `billing_status` | **pending**, partially_paid, paid, cancelled |
+| `payments` | `status` | **pending**, verified, rejected |
+| `payments` | `payment_type` | down_payment, balance |
+| `payments` | `bank_name` | BDO, Chinabank, Other |
+| `documents` | `status` | required, **uploaded**, verified, missing |
+| `documents` | `document_type` | pro_forma_invoice, supplier_invoice, packing_list, export_declaration, certificate, bill_of_lading, other |
+| `labeling_tasks` | `status` | **pending**, in_progress, completed |
+| `staging_tasks` | `status` | **pending**, in_progress, completed |
+| `shipments` | `status` | **planning**, ready_for_loading, loaded, shipped, completed, cancelled |
+| `supplier_deliveries` | `delivery_status` | **received**, with_discrepancy, rejected |
+| `supplier_delivery_items` | `condition_status` | **good**, damaged, missing, wrong_item |
+| `suppliers` | `supplier_type` | manufacturer, distributor, supermarket |
 
-### Proposed canonical order-status lifecycle (to standardize)
+### Order lifecycle
 
-`customer_orders.status` values are currently ad-hoc. Recommended lifecycle,
-aligned with the proposal workflow (define once, use across all modules):
+`customer_orders.status` is the single source of truth for the customer-facing
+tracker (`shipments.status` is logistics detail only):
 
-`draft` → `submitted` → `pfi_prepared` → `pfi_approved` → `awaiting_down_payment`
-→ `payment_verified` → `procurement` → `partially_received` → `warehouse_preparation`
-→ `ready_for_shipment` → `shipped`
+`draft` → `submitted` → `awaiting_down_payment` → `payment_verified`
+→ `procurement_started` → `partially_received` → `warehouse_preparation`
+→ `ready_for_shipment` → `shipped` → `completed` (with `cancelled` as an exit
+from any pre-shipment state)
+
+The admin wireframes' quotation-phase states (pending review / draft PFI /
+sent to customer) are **derived**, not stored: e.g. `submitted` with no
+`billings` row = pending review; `submitted` with a billing = sent to customer.
 
 ## Row-Level Security (RLS) state
 
@@ -98,7 +110,9 @@ on `customer_orders`).
 3. **Over-permissive policies (security)** — `customer_orders` and
    `customer_order_items` are readable by role `public` (`qual = true`), and
    `customers` by any authenticated user. Tighten before UAT/demo.
-4. **No enforced status vocabulary** — standardize on the lifecycle above.
+4. **Status vocabulary is CHECK-enforced** — any status a screen writes or
+   filters on must appear in the allowed-values table above, or inserts fail
+   with error `23514`.
 
 ## Regenerating this snapshot
 
