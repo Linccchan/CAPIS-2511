@@ -59,10 +59,11 @@ export default function MyOrders() {
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
   // Orders whose fulfillment has started open the order tracker; earlier
-  // quotation/PFI stages open the quotation view (same customer_orders row).
+  // quotation/PFI stages (and cancellations) open the quotation view
+  // (same customer_orders row). Values per customer_orders_status_check.
   const ORDER_PHASE = [
-    'payment_verified', 'procurement', 'procurement_started',
-    'partially_received', 'warehouse_preparation', 'ready_for_shipment', 'shipped',
+    'payment_verified', 'procurement_started', 'partially_received',
+    'warehouse_preparation', 'ready_for_shipment', 'shipped', 'completed',
   ]
   const detailPath = (order) =>
     ORDER_PHASE.includes(order.status)
