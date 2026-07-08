@@ -76,6 +76,8 @@ create table customer_orders (
   customer_id           uuid not null references customers (id),
   order_number          text not null,
   destination_country   text,
+  preferred_ship_date   date,                          -- added 2026-07-08 (migration 001)
+  special_instructions  text,                          -- added 2026-07-08 (migration 001)
   status                text not null default 'draft',
   order_date            date default current_date,
   confirmed_at          timestamptz,
@@ -208,10 +210,14 @@ create table billings (
   id                     uuid primary key default gen_random_uuid(),
   order_id               uuid not null references customer_orders (id),
   billing_number         text not null,
+  shipping_amount        numeric not null default 0,     -- added 2026-07-08 (migration 001)
   total_amount           numeric not null default 0,
   down_payment_required  numeric not null default 0,
   balance_amount         numeric not null default 0,
   billing_status         text not null default 'pending',
+  valid_until            date,                            -- added 2026-07-08 (migration 001)
+  prepared_by            uuid references profiles (id),   -- added 2026-07-08 (migration 001)
+  currency               text not null default 'USD',     -- added 2026-07-08 (migration 001)
   odoo_invoice_id        text,
   created_at             timestamptz default now()
 );
