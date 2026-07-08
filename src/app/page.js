@@ -34,11 +34,15 @@ export default function LoginPage() {
       .eq('id', data.user.id)
       .single()
 
-    if (profile?.role === 'admin') router.push('/admin/dashboard')
-    else if (profile?.role === 'warehouse') router.push('/warehouse/dashboard')
-    else if (profile?.role === 'supplier') router.push('/supplier/dashboard')
-    else if (profile?.role === 'executive') router.push('/executive/dashboard')
-    else router.push('/customer/dashboard')
+    const dashboardByRole = {
+      admin: '/admin/dashboard',
+      sales: '/sales/dashboard',
+      management: '/management/dashboard',
+      procurement: '/procurement/dashboard',
+      warehouse: '/warehouse/dashboard',
+      customer: '/customer/dashboard',
+    }
+    router.push(dashboardByRole[profile?.role] || '/customer/dashboard')
 
     setLoading(false)
   }
