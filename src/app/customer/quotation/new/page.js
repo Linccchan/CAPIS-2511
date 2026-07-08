@@ -89,6 +89,8 @@ export default function RequestQuotation() {
         customer_id: customer.id,
         order_number: orderNumber,
         destination_country: destination,
+        preferred_ship_date: preferredDate || null,
+        special_instructions: specialInstructions || null,
         status: 'submitted',
         order_date: new Date().toISOString().split('T')[0],
       })
