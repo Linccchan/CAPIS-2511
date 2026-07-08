@@ -59,6 +59,7 @@ export default function QuotationDetail() {
       warehouse_preparation: 5,
       ready_for_shipment: 5,
       shipped: 5,
+      completed: 5,
     }
     return steps[status] || 1
   }

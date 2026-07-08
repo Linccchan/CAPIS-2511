@@ -45,7 +45,7 @@ export default function CustomerDocuments() {
     status?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) || 'Unknown'
 
   const getStatusStyle = (status) =>
-    status === 'final' ? 'bg-black text-white' : 'bg-gray-200 text-gray-700'
+    status === 'verified' ? 'bg-black text-white' : 'bg-gray-200 text-gray-700'
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'

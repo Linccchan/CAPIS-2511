@@ -50,14 +50,16 @@ export default function OrderDetail() {
     fetchData()
   }, [orderId])
 
+  // Statuses per customer_orders_status_check; cancelled falls back to 1
+  // and is conveyed by the header badge rather than the stepper.
   const STEPS = ['Submitted', 'Payment verified', 'Procurement', 'Warehouse prep', 'Ready for shipment', 'Shipped']
   const stepForStatus = {
-    draft: 1, submitted: 1, pending_review: 1, draft_pfi: 1, sent_to_customer: 1, awaiting_down_payment: 1,
+    draft: 1, submitted: 1, awaiting_down_payment: 1,
     payment_verified: 2,
-    procurement: 3, procurement_started: 3, partially_received: 3,
+    procurement_started: 3, partially_received: 3,
     warehouse_preparation: 4,
     ready_for_shipment: 5,
-    shipped: 6,
+    shipped: 6, completed: 6,
   }
 
   const getStatusStyle = (status) => {
