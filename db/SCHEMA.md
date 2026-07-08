@@ -68,8 +68,9 @@ RLS is **enabled on all 21 tables**. Policy coverage as of the snapshot:
 
 - **Have policies:** `profiles`, `customers`, `products`, `customer_orders`,
   `customer_order_items`, `purchase_orders`, `purchase_order_items`,
-  `shipments`, `inventory_batches`.
-- **RLS on but NO policies (currently deny-all to app users):** `billings`,
+  `shipments`, `inventory_batches`, `billings` (customer-own + staff read,
+  migration 002).
+- **RLS on but NO policies (currently deny-all to app users):**
   `payments`, `documents`, `labeling_tasks`, `staging_tasks`, `suppliers`,
   `supplier_deliveries`, `supplier_delivery_items`, `supplier_performance`,
   `prediction_records`, `warehouse_locations`, `activity_logs`.
@@ -78,15 +79,21 @@ RLS helper functions live in the DB: `has_role(text[])`, `current_user_role()`,
 `customer_can_read_order()`, `customer_can_read_order_item()`,
 `customer_matches_current_user()`.
 
+Application RPCs: `approve_quotation(p_order_id uuid)` (migration 002) —
+security-definer; validates the caller owns the order and it is in `submitted`
+status, then sets `status = 'awaiting_down_payment'` and stamps `confirmed_at`.
+Used by the customer PFI review page (customers have no direct UPDATE rights
+on `customer_orders`).
+
 ## Known code ↔ schema gaps (to fix)
 
 1. **Login role routing is wrong** — `src/app/page.js` uses `executive` and
    `supplier`; the DB uses `management`, and `sales`/`procurement` staff fall
    through to the customer dashboard. Map `executive`→`management`, drop
    `supplier`, and add `sales`/`procurement` routes.
-2. **Deny-all RLS breaks the PFI page** — `billings` has no policy, so
-   `src/app/customer/quotation/[id]/page.js` can never load a pro forma invoice.
-   Add customer-read policies as each module is built.
+2. **Deny-all RLS breaks module screens** — tables without policies return
+   nothing to app users. `billings` was fixed in migration 002; add customer/
+   staff read policies for the remaining tables as each module is built.
 3. **Over-permissive policies (security)** — `customer_orders` and
    `customer_order_items` are readable by role `public` (`qual = true`), and
    `customers` by any authenticated user. Tighten before UAT/demo.
