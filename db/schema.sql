@@ -7,14 +7,17 @@
 -- forward and update it alongside any DB change.
 --
 -- Captured here:   tables, columns, data types, NOT NULL, defaults,
---                  primary keys (all `id`), foreign keys.
+--                  primary keys (all `id`), foreign keys, CHECK constraints
+--                  (see the block at the end of this file; verified against
+--                  pg_constraint on 2026-07-09).
 -- NOT captured here (kept in the live DB — regenerate if you need them):
---   * UNIQUE / CHECK constraints and indexes
+--   * UNIQUE constraints and indexes
 --   * FK ON DELETE / ON UPDATE actions (default assumed: NO ACTION)
 --   * Row-Level Security policies + helper functions
 --     (has_role, current_user_role, customer_can_read_order, ...)
 --     — RLS is ENABLED on every table below; see db/SCHEMA.md for policy state.
--- All statuses are plain `text` with defaults (no Postgres enums exist).
+-- Statuses are `text` (no Postgres enums), but every status/role/type column
+-- is vocabulary-enforced by a CHECK constraint — see the end of this file.
 -- =============================================================================
 
 -- ---------- Auth / core ------------------------------------------------------
@@ -280,3 +283,66 @@ create table activity_logs (
   description  text,
   created_at   timestamptz default now()
 );
+
+-- ---------- CHECK constraints (verified from pg_constraint, 2026-07-09) -----
+-- Every status/role/type vocabulary is enforced in the live DB:
+
+alter table profiles add constraint profiles_role_check
+  check (role in ('admin', 'customer', 'sales', 'procurement', 'warehouse', 'management'));
+
+alter table suppliers add constraint suppliers_supplier_type_check
+  check (supplier_type in ('manufacturer', 'distributor', 'supermarket'));
+
+alter table customer_orders add constraint customer_orders_status_check
+  check (status in ('draft', 'submitted', 'awaiting_down_payment', 'payment_verified',
+                    'procurement_started', 'partially_received', 'warehouse_preparation',
+                    'ready_for_shipment', 'shipped', 'completed', 'cancelled'));
+
+alter table customer_order_items add constraint customer_order_items_quantity_ordered_check
+  check (quantity_ordered > 0);
+
+alter table purchase_orders add constraint purchase_orders_status_check
+  check (status in ('draft', 'sent', 'partially_delivered', 'delivered', 'cancelled'));
+
+alter table purchase_order_items add constraint purchase_order_items_quantity_ordered_check
+  check (quantity_ordered > 0);
+
+alter table supplier_deliveries add constraint supplier_deliveries_delivery_status_check
+  check (delivery_status in ('received', 'with_discrepancy', 'rejected'));
+
+alter table supplier_delivery_items add constraint supplier_delivery_items_condition_status_check
+  check (condition_status in ('good', 'damaged', 'missing', 'wrong_item'));
+
+alter table supplier_delivery_items add constraint supplier_delivery_items_quantity_delivered_check
+  check (quantity_delivered >= 0);
+
+alter table labeling_tasks add constraint labeling_tasks_status_check
+  check (status in ('pending', 'in_progress', 'completed'));
+
+alter table staging_tasks add constraint staging_tasks_status_check
+  check (status in ('pending', 'in_progress', 'completed'));
+
+alter table shipments add constraint shipments_status_check
+  check (status in ('planning', 'ready_for_loading', 'loaded', 'shipped', 'completed', 'cancelled'));
+
+alter table billings add constraint billings_billing_status_check
+  check (billing_status in ('pending', 'partially_paid', 'paid', 'cancelled'));
+
+alter table payments add constraint payments_payment_type_check
+  check (payment_type in ('down_payment', 'balance'));
+
+alter table payments add constraint payments_status_check
+  check (status in ('pending', 'verified', 'rejected'));
+
+alter table payments add constraint payments_bank_name_check
+  check (bank_name in ('BDO', 'Chinabank', 'Other'));
+
+alter table payments add constraint payments_amount_check
+  check (amount > 0);
+
+alter table documents add constraint documents_status_check
+  check (status in ('required', 'uploaded', 'verified', 'missing'));
+
+alter table documents add constraint documents_document_type_check
+  check (document_type in ('pro_forma_invoice', 'supplier_invoice', 'packing_list',
+                           'export_declaration', 'certificate', 'bill_of_lading', 'other'));
