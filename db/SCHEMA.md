@@ -69,9 +69,10 @@ RLS is **enabled on all 21 tables**. Policy coverage as of the snapshot:
 - **Have policies:** `profiles`, `customers`, `products`, `customer_orders`,
   `customer_order_items`, `purchase_orders`, `purchase_order_items`,
   `shipments`, `inventory_batches`, `billings` (customer-own + staff read,
-  migration 002).
+  migration 002), `documents` (customer-own non-draft + staff read,
+  migration 003).
 - **RLS on but NO policies (currently deny-all to app users):**
-  `payments`, `documents`, `labeling_tasks`, `staging_tasks`, `suppliers`,
+  `payments`, `labeling_tasks`, `staging_tasks`, `suppliers`,
   `supplier_deliveries`, `supplier_delivery_items`, `supplier_performance`,
   `prediction_records`, `warehouse_locations`, `activity_logs`.
 
