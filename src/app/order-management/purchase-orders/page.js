@@ -5,9 +5,9 @@ import { createRecord, deleteRecord, fetchOrderManagementData, formatDate, updat
 import { Badge, Button, Card, ConfirmDialog, EmptyState, OrderShell, ProgressBar, TableSkeleton, statusTone, useToast } from '@/components/order-management/ui'
 
 const blankForm = {
+  order_id: '',
+  supplier_id: '',
   po_number: '',
-  supplier_name: '',
-  date_issued: '',
   expected_delivery_date: '',
   status: 'Pending',
 }
@@ -51,16 +51,19 @@ export default function PurchaseOrdersPage() {
   const purchaseOrders = useMemo(() => {
     const term = query.toLowerCase()
     return (data?.purchaseOrders || []).filter((po) =>
-      [po.poNumber, po.supplier, po.status].join(' ').toLowerCase().includes(term),
+      [po.poNumber, po.supplier, po.status, po.customerOrderNumber].join(' ').toLowerCase().includes(term),
     )
   }, [data, query])
+
+  const customerOrders = data?.customerOrders || []
+  const suppliers = data?.suppliers || []
 
   const openEdit = (po) => {
     setEditing(po)
     setForm({
+      order_id: po.customerOrderId || '',
+      supplier_id: po.supplierId || '',
       po_number: po.poNumber,
-      supplier_name: po.supplier,
-      date_issued: po.dateIssued ? String(po.dateIssued).slice(0, 10) : '',
       expected_delivery_date: po.expectedDelivery ? String(po.expectedDelivery).slice(0, 10) : '',
       status: po.status,
     })
@@ -75,6 +78,12 @@ export default function PurchaseOrdersPage() {
     event.preventDefault()
     setSaving(true)
     try {
+      if (!form.order_id) {
+        throw new Error('Select a customer order before creating a purchase order.')
+      }
+      if (!form.supplier_id) {
+        throw new Error('Select a supplier before creating a purchase order.')
+      }
       const payload = Object.fromEntries(Object.entries(form).filter(([, value]) => value !== ''))
       let result
       if (editing) {
@@ -115,7 +124,7 @@ export default function PurchaseOrdersPage() {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search purchase orders or suppliers" className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400 sm:max-w-xs" />
           </div>
 
-          {loading ? <TableSkeleton cols={7} /> : purchaseOrders.length === 0 ? (
+          {loading ? <TableSkeleton cols={8} /> : purchaseOrders.length === 0 ? (
             <EmptyState title="No purchase orders" />
           ) : (
             <div className="overflow-x-auto">
@@ -123,8 +132,9 @@ export default function PurchaseOrdersPage() {
                 <thead className="border-b border-gray-200 text-xs uppercase text-gray-500">
                   <tr>
                     <th className="py-3 pr-4">Purchase Order Number</th>
+                    <th className="py-3 pr-4">Customer Order</th>
                     <th className="py-3 pr-4">Supplier</th>
-                    <th className="py-3 pr-4">Date Issued</th>
+                    <th className="py-3 pr-4">Created</th>
                     <th className="py-3 pr-4">Expected Delivery</th>
                     <th className="py-3 pr-4">Status</th>
                     <th className="py-3 pr-4">Progress</th>
@@ -135,6 +145,7 @@ export default function PurchaseOrdersPage() {
                   {purchaseOrders.map((po) => (
                     <tr key={po.id}>
                       <td className="py-3 pr-4 font-medium">{po.poNumber}</td>
+                      <td className="py-3 pr-4 text-gray-600">{po.customerOrderNumber || 'Not linked'}</td>
                       <td className="py-3 pr-4 text-gray-600">{po.supplier}</td>
                       <td className="py-3 pr-4 text-gray-600">{formatDate(po.dateIssued)}</td>
                       <td className="py-3 pr-4 text-gray-600">{formatDate(po.expectedDelivery)}</td>
@@ -156,14 +167,28 @@ export default function PurchaseOrdersPage() {
 
         <Card title={editing ? 'Edit Purchase Order' : 'New Purchase Order'}>
           <form onSubmit={save} className="space-y-4">
+            <label className="block text-sm font-medium text-gray-700">Customer Order
+              <select value={form.order_id} onChange={(event) => setForm({ ...form, order_id: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
+                <option value="">Select customer order</option>
+                {customerOrders.map((order) => (
+                  <option key={order.id} value={order.id}>
+                    {order.orderNumber} - {order.customerName}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="block text-sm font-medium text-gray-700">Purchase Order Number
               <input value={form.po_number} onChange={(event) => setForm({ ...form, po_number: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
             </label>
             <label className="block text-sm font-medium text-gray-700">Supplier
-              <input value={form.supplier_name} onChange={(event) => setForm({ ...form, supplier_name: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
-            </label>
-            <label className="block text-sm font-medium text-gray-700">Date Issued
-              <input type="date" value={form.date_issued} onChange={(event) => setForm({ ...form, date_issued: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
+              <select value={form.supplier_id} onChange={(event) => setForm({ ...form, supplier_id: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
+                <option value="">Select supplier</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.name || supplier.supplier_name || supplier.company_name || `Supplier ${supplier.id}`}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="block text-sm font-medium text-gray-700">Expected Delivery
               <input type="date" value={form.expected_delivery_date} onChange={(event) => setForm({ ...form, expected_delivery_date: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
