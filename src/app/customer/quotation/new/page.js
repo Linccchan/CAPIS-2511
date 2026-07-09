@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
+// Draft product ids shared with the product catalog via sessionStorage
+const STORAGE_KEY = 'dmc_quotation_request_ids'
+
 export default function RequestQuotation() {
   const router = useRouter()
   const [customer, setCustomer] = useState(null)
@@ -38,15 +41,40 @@ export default function RequestQuotation() {
         .order('category', { ascending: true })
 
       setProducts(productsData || [])
+
+      // Preselect products added from the catalog
+      let draftIds = []
+      try {
+        draftIds = JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || []
+      } catch {
+        draftIds = []
+      }
+      const preselected = (productsData || [])
+        .filter((p) => draftIds.includes(p.id))
+        .map((p) => ({
+          product_id: p.id,
+          product_name: p.product_name,
+          brand: p.brand,
+          unit_cbm: p.unit_cbm,
+          unit_weight_kg: p.unit_weight_kg,
+          quantity_ordered: 1,
+          notes: ''
+        }))
+      if (preselected.length > 0) setSelectedItems(preselected)
+
       setLoading(false)
     }
 
     fetchData()
   }, [])
 
+  const syncStorage = (items) => {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(items.map((i) => i.product_id)))
+  }
+
   const addProduct = (product) => {
     if (selectedItems.find(i => i.product_id === product.id)) return
-    setSelectedItems([...selectedItems, {
+    const next = [...selectedItems, {
       product_id: product.id,
       product_name: product.product_name,
       brand: product.brand,
@@ -54,7 +82,9 @@ export default function RequestQuotation() {
       unit_weight_kg: product.unit_weight_kg,
       quantity_ordered: 1,
       notes: ''
-    }])
+    }]
+    setSelectedItems(next)
+    syncStorage(next)
   }
 
   const updateQuantity = (product_id, qty) => {
@@ -70,7 +100,9 @@ export default function RequestQuotation() {
   }
 
   const removeItem = (product_id) => {
-    setSelectedItems(selectedItems.filter(i => i.product_id !== product_id))
+    const next = selectedItems.filter(i => i.product_id !== product_id)
+    setSelectedItems(next)
+    syncStorage(next)
   }
 
   const totalCBM = selectedItems.reduce((sum, i) => sum + ((i.unit_cbm || 0) * i.quantity_ordered), 0)
@@ -81,13 +113,22 @@ export default function RequestQuotation() {
     if (!customer || selectedItems.length === 0 || !destination) return
     setSubmitting(true)
 
-    const orderNumber = `QT-${Date.now()}`
+    const { data: orderNumber, error: numberError } = await supabase
+      .rpc('next_document_number', { p_prefix: 'QT' })
+
+    if (numberError) {
+      console.error('Number error:', JSON.stringify(numberError))
+      alert('Error: ' + numberError.message)
+      setSubmitting(false)
+      return
+    }
 
     const { data: order, error: orderError } = await supabase
       .from('customer_orders')
       .insert({
         customer_id: customer.id,
         order_number: orderNumber,
+        quotation_number: orderNumber,
         destination_country: destination,
         preferred_ship_date: preferredDate || null,
         special_instructions: specialInstructions || null,
@@ -123,6 +164,7 @@ export default function RequestQuotation() {
       return
     }
 
+    sessionStorage.removeItem(STORAGE_KEY)
     setNewOrderId(order.id)
     setSubmitted(true)
     setSubmitting(false)
