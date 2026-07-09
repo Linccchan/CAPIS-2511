@@ -1,189 +1,203 @@
-import Image from 'next/image'
+'use client'
+
 import Link from 'next/link'
-
-const metrics = [
-  { label: 'Active Orders', value: '128', change: '+12 this week' },
-  { label: 'Pending Approvals', value: '18', change: '6 require review' },
-  { label: 'Purchase Orders', value: '42', change: '9 due today' },
-  { label: 'Ready Orders', value: '24', change: '+4 from yesterday' },
-]
-
-const modules = [
-  {
-    title: 'Order Management',
-    description: 'Track customer orders, purchase orders, and supplier delivery readiness.',
-    href: '/order-management',
-    action: 'Open module',
-  },
-]
-
-const activity = [
-  { id: 'CO-1048', customer: 'Maritime Foods Co.', owner: 'Order Management', status: 'Awaiting Supplier', tone: 'amber' },
-  { id: 'PO-2216', customer: 'Pacific Packaging', owner: 'Order Management', status: 'Partially Delivered', tone: 'gray' },
-  { id: 'SH-0912', customer: 'Northline Export', owner: 'Order Management', status: 'Ready', tone: 'green' },
-  { id: 'CO-1045', customer: 'Davao Specialty Goods', owner: 'Admin Review', status: 'Needs Approval', tone: 'black' },
-]
-
-const approvals = [
-  { label: 'Customer account changes', value: 5 },
-  { label: 'Purchase order edits', value: 8 },
-  { label: 'Shipment date requests', value: 3 },
-]
-
-function StatusBadge({ children, tone = 'gray' }) {
-  const tones = {
-    amber: 'border-yellow-200 bg-yellow-50 text-yellow-800',
-    green: 'border-green-200 bg-green-50 text-green-700',
-    black: 'border-gray-900 bg-gray-900 text-white',
-    gray: 'border-gray-200 bg-gray-50 text-gray-700',
-  }
-
-  return (
-    <span className={`inline-flex rounded border px-2 py-1 text-xs font-medium ${tones[tone]}`}>
-      {children}
-    </span>
-  )
-}
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
 
 export default function AdminDashboard() {
+  const [metrics, setMetrics] = useState([
+    { label: 'Active Orders', value: 0, href: '/order-management/customer-orders' },
+    { label: 'Purchase Orders', value: 0, href: '/admin/purchase-orders' },
+    { label: 'Pending Deliveries', value: 0, href: '/warehouse/dashboard' },
+    { label: 'Ready Shipments', value: 0, href: '/warehouse/staging' },
+  ])
+  const [recentOrders, setRecentOrders] = useState([])
+  const [recentPurchaseOrders, setRecentPurchaseOrders] = useState([])
+
+  useEffect(() => {
+    let active = true
+    async function countRows(table, filter) {
+      let query = supabase.from(table).select('*', { count: 'exact', head: true })
+      if (filter) query = filter(query)
+      const { count } = await query
+      return count || 0
+    }
+
+    async function load() {
+      const [
+        activeOrders,
+        purchaseOrders,
+        pendingDeliveries,
+        readyShipments,
+        recentOrdersResult,
+        recentPurchaseOrdersResult,
+      ] = await Promise.all([
+        countRows('customer_orders', (query) => query.not('status', 'in', '(completed,cancelled)')),
+        countRows('purchase_orders', (query) => query.not('status', 'eq', 'cancelled')),
+        countRows('supplier_deliveries', (query) => query.eq('delivery_status', 'pending_confirmation')),
+        countRows('shipments', (query) => query.eq('status', 'ready_for_loading')),
+        supabase
+          .from('customer_orders')
+          .select('id, order_number, status, destination_country, created_at, customers(company_name)')
+          .order('created_at', { ascending: false })
+          .limit(5),
+        supabase
+          .from('purchase_orders')
+          .select('id, po_number, status, expected_delivery_date, suppliers(supplier_name), customer_orders(order_number)')
+          .order('created_at', { ascending: false })
+          .limit(5),
+      ])
+      if (!active) return
+      setMetrics([
+        { label: 'Active Orders', value: activeOrders, href: '/order-management/customer-orders' },
+        { label: 'Purchase Orders', value: purchaseOrders, href: '/admin/purchase-orders' },
+        { label: 'Pending Deliveries', value: pendingDeliveries, href: '/warehouse/dashboard' },
+        { label: 'Ready Shipments', value: readyShipments, href: '/warehouse/staging' },
+      ])
+      setRecentOrders(recentOrdersResult.data || [])
+      setRecentPurchaseOrders(recentPurchaseOrdersResult.data || [])
+    }
+    load()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const workspaceGroups = [
+    {
+      title: 'Operations',
+      items: [
+        { title: 'Order Management', description: 'Customer orders, purchase orders, and supplier delivery readiness.', href: '/order-management' },
+        { title: 'Purchase Orders', description: 'Monitor supplier purchase orders and overdue delivery status.', href: '/admin/purchase-orders' },
+        { title: 'Suppliers', description: 'Review supplier profiles, performance, and active purchase orders.', href: '/admin/suppliers' },
+      ],
+    },
+    {
+      title: 'Warehouse',
+      items: [
+        { title: 'Warehouse Dashboard', description: 'Expected deliveries, pending confirmations, and sticker tasks.', href: '/warehouse/dashboard' },
+        { title: 'Compliance', description: 'Track sticker designs, label completion, and export readiness.', href: '/admin/compliance' },
+        { title: 'Locations', description: 'Maintain active warehouse rack and staging locations.', href: '/admin/locations' },
+      ],
+    },
+    {
+      title: 'Catalog',
+      items: [
+        { title: 'Supplier Costs', description: 'Review supplier cost changes and product pricing prompts.', href: '/admin/supplier-costs' },
+      ],
+    },
+  ]
+
   return (
-    <main className="min-h-screen bg-gray-100 text-gray-900">
-      <div className="flex min-h-screen">
-        <aside className="hidden w-64 border-r border-gray-200 bg-white lg:block">
-          <div className="border-b border-gray-200 px-6 py-5">
-            <div className="flex items-center gap-3">
-              <Image src="/dmc-logo.png" alt="DMC Enterprise Logo" width={42} height={42} />
-              <div>
-                <div className="text-lg font-semibold leading-tight">CAPIS</div>
-                <div className="text-xs text-gray-500">Admin Console</div>
+    <div className="space-y-6">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase text-gray-500">Export Consolidation System</p>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">Admin Dashboard</h1>
+        </div>
+        <Link href="/order-management" className="btn btn-primary">Open Order Management</Link>
+      </header>
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <Link key={metric.label} href={metric.href} className="stat-card block">
+            <div className="text-xs font-semibold uppercase text-gray-500">{metric.label}</div>
+            <div className="mt-3 text-3xl font-semibold text-gray-900">{metric.value}</div>
+          </Link>
+        ))}
+      </section>
+
+      <section className="card">
+        <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4">
+          <h2 className="text-sm font-semibold text-gray-900">Admin Workspaces</h2>
+          <Link href="/order-management" className="text-sm font-medium text-gray-900 hover:underline">Open orders</Link>
+        </div>
+        <div className="grid gap-5 p-5 xl:grid-cols-3">
+          {workspaceGroups.map((group) => (
+            <div key={group.title} className="space-y-3">
+              <div className="text-xs font-semibold uppercase text-gray-500">{group.title}</div>
+              <div className="space-y-3">
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="block rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-50"
+                  >
+                    <div className="text-sm font-semibold text-gray-900">{item.title}</div>
+                    <p className="mt-1 text-sm leading-5 text-gray-500">{item.description}</p>
+                  </Link>
+                ))}
               </div>
             </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <section className="card">
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+            <h2 className="text-sm font-semibold text-gray-900">Recent Customer Orders</h2>
+            <Link href="/order-management/customer-orders" className="text-sm font-medium text-gray-900 hover:underline">See all</Link>
           </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="table-th">Order</th>
+                  <th className="table-th">Customer</th>
+                  <th className="table-th">Destination</th>
+                  <th className="table-th">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td className="table-td">
+                      <Link href={`/order-management/customer-orders/${order.id}`} className="td-primary hover:underline">{order.order_number}</Link>
+                    </td>
+                    <td className="table-td">{order.customers?.company_name || 'Customer'}</td>
+                    <td className="table-td">{order.destination_country || '-'}</td>
+                    <td className="table-td">{order.status}</td>
+                  </tr>
+                ))}
+                {recentOrders.length === 0 && <tr><td colSpan={4} className="table-td py-8 text-center text-gray-500">No customer orders yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-          <nav className="space-y-1 p-4">
-            {['Dashboard', 'Users', 'Approvals', 'Reports', 'Settings'].map((item) => (
-              <Link
-                key={item}
-                href={item === 'Dashboard' ? '/admin/dashboard' : '#'}
-                className={`block rounded px-3 py-2 text-sm font-medium ${
-                  item === 'Dashboard' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                {item}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-
-        <section className="flex min-w-0 flex-1 flex-col">
-          <header className="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">Export Consolidation System</p>
-                <h1 className="mt-1 text-xl font-semibold text-gray-900">Admin Dashboard</h1>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/order-management"
-                  className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  View Orders
-                </Link>
-                <Link
-                  href="#"
-                  className="rounded bg-black px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
-                >
-                  New Report
-                </Link>
-              </div>
-            </div>
-          </header>
-
-          <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {metrics.map((metric) => (
-                <div key={metric.label} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-semibold uppercase text-gray-500">{metric.label}</div>
-                  <div className="mt-3 text-3xl font-semibold text-gray-900">{metric.value}</div>
-                  <div className="mt-2 text-sm text-gray-500">{metric.change}</div>
-                </div>
-              ))}
-            </section>
-
-            <section className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-              <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4">
-                  <div>
-                    <h2 className="text-sm font-semibold text-gray-900">Operational Modules</h2>
-                    <p className="mt-1 text-sm text-gray-500">Quick access to the main work areas.</p>
-                  </div>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {modules.map((module) => (
-                    <div key={module.title} className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-900">{module.title}</h3>
-                        <p className="mt-1 max-w-2xl text-sm text-gray-500">{module.description}</p>
-                      </div>
-                      <Link href={module.href} className="text-sm font-medium text-gray-900 hover:underline">
-                        {module.action}
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                <div className="border-b border-gray-200 px-5 py-4">
-                  <h2 className="text-sm font-semibold text-gray-900">Approval Queue</h2>
-                  <p className="mt-1 text-sm text-gray-500">Items waiting on administrator action.</p>
-                </div>
-                <div className="space-y-3 p-5">
-                  {approvals.map((item) => (
-                    <div key={item.label} className="flex items-center justify-between rounded border border-gray-200 px-4 py-3">
-                      <span className="text-sm text-gray-600">{item.label}</span>
-                      <span className="text-sm font-semibold text-gray-900">{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4">
-                <h2 className="text-sm font-semibold text-gray-900">Recent Activity</h2>
-                <Link href="/order-management" className="text-sm font-medium text-gray-900 hover:underline">
-                  See all
-                </Link>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-gray-200 text-xs uppercase text-gray-500">
-                    <tr>
-                      <th className="px-5 py-3">Reference</th>
-                      <th className="px-5 py-3">Customer</th>
-                      <th className="px-5 py-3">Owner</th>
-                      <th className="px-5 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {activity.map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-5 py-4 font-medium text-gray-900">{item.id}</td>
-                        <td className="px-5 py-4 text-gray-600">{item.customer}</td>
-                        <td className="px-5 py-4 text-gray-600">{item.owner}</td>
-                        <td className="px-5 py-4">
-                          <StatusBadge tone={item.tone}>{item.status}</StatusBadge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+        <section className="card">
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+            <h2 className="text-sm font-semibold text-gray-900">Recent Purchase Orders</h2>
+            <Link href="/admin/purchase-orders" className="text-sm font-medium text-gray-900 hover:underline">See all</Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="table-th">PO Number</th>
+                  <th className="table-th">Supplier</th>
+                  <th className="table-th">Expected</th>
+                  <th className="table-th">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentPurchaseOrders.map((po) => (
+                  <tr key={po.id}>
+                    <td className="table-td">
+                      <Link href="/admin/purchase-orders" className="td-primary hover:underline">{po.po_number}</Link>
+                    </td>
+                    <td className="table-td">{po.suppliers?.supplier_name || 'Supplier'}</td>
+                    <td className="table-td">{po.expected_delivery_date || '-'}</td>
+                    <td className="table-td">{po.status}</td>
+                  </tr>
+                ))}
+                {recentPurchaseOrders.length === 0 && <tr><td colSpan={4} className="table-td py-8 text-center text-gray-500">No purchase orders yet.</td></tr>}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>
-    </main>
+    </div>
   )
 }
