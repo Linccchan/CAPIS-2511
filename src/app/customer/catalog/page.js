@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
+// Draft product ids shared with the quotation request form via sessionStorage
+const STORAGE_KEY = 'dmc_quotation_request_ids'
+
 export default function ProductCatalog() {
   const router = useRouter()
   const [products, setProducts] = useState([])
@@ -13,11 +16,18 @@ export default function ProductCatalog() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [brandFilter, setBrandFilter] = useState('all')
   const [availableOnly, setAvailableOnly] = useState(false)
+  const [selectedIds, setSelectedIds] = useState([])
 
   useEffect(() => {
     const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
+
+      try {
+        setSelectedIds(JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || [])
+      } catch {
+        setSelectedIds([])
+      }
 
       const { data: productsData } = await supabase
         .from('products')
@@ -30,6 +40,16 @@ export default function ProductCatalog() {
 
     fetchData()
   }, [])
+
+  const toggleRequest = (product) => {
+    setSelectedIds((prev) => {
+      const next = prev.includes(product.id)
+        ? prev.filter((id) => id !== product.id)
+        : [...prev, product.id]
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
 
   const categories = ['all', ...new Set(products.map(p => p.category).filter(Boolean))]
   const brands = ['all', ...new Set(products.map(p => p.brand).filter(Boolean))]
@@ -144,6 +164,19 @@ export default function ProductCatalog() {
           </label>
         </div>
 
+        {/* Selection bar */}
+        {selectedIds.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded p-3 mb-6 flex justify-between items-center text-sm">
+            <span>● {selectedIds.length} product{selectedIds.length > 1 ? 's' : ''} selected for your quotation request</span>
+            <button
+              onClick={() => router.push('/customer/quotation/new')}
+              className="bg-black text-white text-sm px-4 py-2 rounded hover:bg-gray-800"
+            >
+              Continue to request →
+            </button>
+          </div>
+        )}
+
         {/* Product Groups */}
         {Object.keys(groupedProducts).length === 0 ? (
           <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400">
@@ -170,10 +203,11 @@ export default function ProductCatalog() {
                       {product.is_available ? 'Available' : 'Unavailable'}
                     </span>
                     <button
+                      onClick={() => toggleRequest(product)}
                       disabled={!product.is_available}
-                      className={`text-sm px-4 py-2 rounded border ${product.is_available ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-300 cursor-not-allowed'}`}
+                      className={`text-sm px-4 py-2 rounded border ${!product.is_available ? 'border-gray-200 text-gray-300 cursor-not-allowed' : selectedIds.includes(product.id) ? 'border-black bg-black text-white hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                     >
-                      + Add to request
+                      {selectedIds.includes(product.id) ? 'Added ✓' : '+ Add to request'}
                     </button>
                   </div>
                 ))}
