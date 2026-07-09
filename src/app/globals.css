@@ -1,26 +1,79 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #F5F5F3;
+    --surface: #FFFFFF;
+    --border: #D4D2CC;
+    --border-strong: #ACACAA;
+    --text-primary: #1A1A18;
+    --text-secondary: #6B6B68;
+    --text-tertiary: #9E9E9B;
+    --accent: #2A2A28;
+    --tag-bg: #E8E8E5;
+    --placeholder: #C8C8C5;
+    --radius: 6px;
+    --radius-lg: 10px;
   }
+  body { @apply text-sm; background: #E0E0DC; color: var(--text-primary); }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .btn { @apply inline-flex items-center gap-1.5 px-4 h-9 rounded-md text-xs font-medium cursor-pointer border-none transition-opacity; }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--tag-bg); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-sm { @apply px-3 h-7 text-xs; }
+  .btn-danger { background: #dc2626; color: #fff; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .card-pad { @apply p-5; }
+
+  .input {
+    width: 100%; height: 36px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0 10px; font-size: 12px; color: var(--text-primary);
+    outline: none;
+  }
+  .input:focus { border-color: var(--border-strong); }
+  textarea.input { height: auto; padding: 8px 10px; resize: vertical; }
+  select.input { cursor: pointer; }
+
+  .badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border; }
+  .badge-gray { background: #EBEBEB; color: #555; border-color: #D0D0CE; }
+  .badge-dark { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .badge-mid { background: var(--tag-bg); color: #3A3A38; border-color: #C8C8C5; }
+  .badge-red { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+  .badge-green { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+  .badge-yellow { background: #fefce8; color: #a16207; border-color: #fef08a; }
+  .badge-blue { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+
+  .table-th { @apply px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide; color: var(--text-tertiary); border-bottom: 1px solid var(--border); }
+  .table-td { @apply px-3 py-3 text-xs; color: var(--text-secondary); border-bottom: 1px solid var(--bg); }
+  tr:last-child .table-td { border-bottom: none; }
+  tr:hover .table-td { background: var(--bg); }
+  .td-primary { font-weight: 500; color: var(--text-primary); }
+
+  .sidebar-item { @apply flex items-center gap-2 h-8 px-2 rounded text-xs cursor-pointer; color: var(--text-secondary); }
+  .sidebar-item:hover { background: var(--bg); color: var(--text-primary); }
+  .sidebar-item.active { background: var(--bg); color: var(--text-primary); font-weight: 500; }
+  .sidebar-dot { @apply w-1.5 h-1.5 rounded-full flex-shrink-0; background: var(--border-strong); }
+  .sidebar-dot.active { background: var(--text-primary); }
+
+  .stat-card { @apply card card-pad; }
+  .stat-val { @apply text-2xl font-bold; color: var(--text-primary); }
+  .stat-lbl { @apply text-xs mt-1; color: var(--text-secondary); }
+  .stat-sub { @apply text-xs mt-0.5; color: var(--text-tertiary); }
+
+  .section-label { @apply text-xs font-semibold uppercase tracking-widest mb-1; color: var(--text-tertiary); }
+  .divider { height: 1px; background: var(--border); }
+
+  .info-note { @apply text-xs px-3 py-2 rounded; background: var(--bg); color: var(--text-tertiary); border: 1px solid var(--border); }
+
+  .alert-banner { @apply flex items-start gap-3 p-4 rounded-lg border; }
+  .alert-warn { background: #fefce8; border-color: #fef08a; color: #854d0e; }
+  .alert-info { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
 }
