@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabaseClient'
 
 const TABLES = [
   'customers',
+  'suppliers',
   'customer_orders',
   'customer_order_items',
   'purchase_orders',
@@ -64,6 +65,7 @@ export async function fetchOrderManagementData() {
 
 export function buildOrderManagementData(raw) {
   const customers = raw.customers || []
+  const suppliers = raw.suppliers || []
   const customerOrders = raw.customer_orders || []
   const customerOrderItems = raw.customer_order_items || []
   const purchaseOrders = raw.purchase_orders || []
@@ -71,8 +73,15 @@ export function buildOrderManagementData(raw) {
   const products = raw.products || []
   const inventoryBatches = raw.inventory_batches || []
   const shipments = raw.shipments || []
+  const normalizedSuppliers = suppliers.map((supplier) => ({
+    ...supplier,
+    id: idOf(supplier),
+    name: first(supplier, ['supplier_name', 'name', 'company_name', 'vendor_name'], `Supplier ${idOf(supplier)}`),
+  }))
 
   const customerById = new Map(customers.map((customer) => [String(idOf(customer)), customer]))
+  const supplierById = new Map(normalizedSuppliers.map((supplier) => [String(supplier.id), supplier]))
+  const customerOrderById = new Map(customerOrders.map((order) => [String(idOf(order)), order]))
   const productById = new Map(products.map((product) => [String(idOf(product)), product]))
 
   const deliveredByPoItem = new Map()
@@ -119,22 +128,28 @@ export function buildOrderManagementData(raw) {
     const ordered = items.reduce((sum, item) => sum + item.orderedQuantity, 0)
     const delivered = items.reduce((sum, item) => sum + item.deliveredQuantity, 0)
     const progress = ordered > 0 ? Math.min(Math.round((delivered / ordered) * 100), 100) : 0
-    const supplier = first(po, ['supplier_name', 'supplier', 'vendor_name'], 'Supplier')
+    const supplierId = first(po, ['supplier_id', 'vendor_id'])
+    const supplierRecord = supplierById.get(String(supplierId))
+    const supplier = first(supplierRecord, ['supplier_name', 'name', 'company_name', 'vendor_name'], first(po, ['supplier_name', 'supplier', 'vendor_name'], 'Supplier'))
     const status = normalizeStatus(
       first(po, ['status'], progress >= 100 ? 'Delivered' : progress > 0 ? 'Partially Delivered' : 'Pending'),
     )
+    const customerOrderId = first(po, ['customer_order_id', 'order_id'])
+    const customerOrder = customerOrderById.get(String(customerOrderId))
 
     return {
       ...po,
       id: poId,
       poNumber: first(po, ['po_number', 'purchase_order_number', 'order_number', 'reference_number'], `PO-${poId}`),
+      supplierId,
       supplier,
-      dateIssued: first(po, ['date_issued', 'issued_date', 'created_at', 'order_date']),
+      dateIssued: first(po, ['created_at']),
       expectedDelivery: first(po, ['expected_delivery_date', 'expected_delivery', 'delivery_date']),
       status,
       progress,
       items,
-      customerOrderId: first(po, ['customer_order_id', 'order_id']),
+      customerOrderId,
+      customerOrderNumber: first(customerOrder, ['order_number', 'customer_order_number', 'reference_number'], customerOrderId ? `ORD-${customerOrderId}` : ''),
     }
   })
 
@@ -202,6 +217,7 @@ export function buildOrderManagementData(raw) {
 
   return {
     customers,
+    suppliers: normalizedSuppliers,
     customerOrders: normalizedCustomerOrders,
     purchaseOrders: normalizedPurchaseOrders,
     supplierDeliveries,
