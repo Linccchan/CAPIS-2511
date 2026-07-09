@@ -40,6 +40,11 @@ known gaps between the code and the database.
 > There is a `suppliers` table but no `supplier` login role. The wireframes
 > include a supplier portal, so when that module is built the
 > `profiles_role_check` constraint must be altered to allow `'supplier'`.
+> Migration `005_supplier_role_and_portal_rls.sql` is **prepared but NOT yet
+> applied** — it adds the role, `suppliers.profile_id`, the
+> `pending_confirmation` delivery status, and all supplier-portal RLS
+> policies. Run it only once the supplier/warehouse module is aligned with
+> this shared database.
 
 ## Status columns — allowed values (CHECK-enforced) & defaults
 
