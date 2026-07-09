@@ -77,7 +77,8 @@ create table products (
 create table customer_orders (
   id                    uuid primary key default gen_random_uuid(),
   customer_id           uuid not null references customers (id),
-  order_number          text not null,
+  order_number          text not null,                 -- QT-YYYY-NNN, renamed ORD-YYYY-NNN on approval
+  quotation_number      text,                          -- added 2026-07-09 (migration 004); keeps the QT- number
   destination_country   text,
   preferred_ship_date   date,                          -- added 2026-07-08 (migration 001)
   special_instructions  text,                          -- added 2026-07-08 (migration 001)
@@ -282,6 +283,15 @@ create table activity_logs (
   record_id    uuid,
   description  text,
   created_at   timestamptz default now()
+);
+
+-- Per-prefix per-year counters behind next_document_number() (migration 004).
+-- RLS enabled with no policies: only security-definer functions touch it.
+create table number_sequences (
+  prefix     text    not null,
+  year       integer not null,
+  last_value integer not null default 0,
+  primary key (prefix, year)
 );
 
 -- ---------- CHECK constraints (verified from pg_constraint, 2026-07-09) -----

@@ -92,11 +92,18 @@ RLS helper functions live in the DB: `has_role(text[])`, `current_user_role()`,
 `customer_can_read_order()`, `customer_can_read_order_item()`,
 `customer_matches_current_user()`.
 
-Application RPCs: `approve_quotation(p_order_id uuid)` (migration 002) —
-security-definer; validates the caller owns the order and it is in `submitted`
-status, then sets `status = 'awaiting_down_payment'` and stamps `confirmed_at`.
-Used by the customer PFI review page (customers have no direct UPDATE rights
-on `customer_orders`).
+Application RPCs (all security-definer):
+
+- `approve_quotation(p_order_id uuid)` (migration 002, v2 in 004) — validates
+  the caller owns the order and it is in `submitted` status, then sets
+  `status = 'awaiting_down_payment'`, stamps `confirmed_at`, moves the QT-
+  number into `quotation_number`, and assigns a fresh ORD- `order_number`.
+  Used by the customer PFI review page (customers have no direct UPDATE
+  rights on `customer_orders`).
+- `next_document_number(p_prefix text)` (migration 004) — returns
+  `PREFIX-YYYY-NNN` from atomic per-prefix per-year counters in
+  `number_sequences` (RLS-locked, function-only access). Used for QT- numbers
+  on quotation submit and ORD- numbers on approval.
 
 ## Known code ↔ schema gaps (to fix)
 

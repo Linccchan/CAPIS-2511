@@ -142,7 +142,7 @@ export default function QuotationDetail() {
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Quotation {order.order_number}</h1>
+            <h1 className="text-xl font-bold text-gray-900">Quotation {order.quotation_number || order.order_number}</h1>
             <p className="text-sm text-gray-500">
               Submitted {order.order_date ? new Date(order.order_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'} · {order.destination_country} · {orderItems.length} products
             </p>
@@ -272,7 +272,7 @@ export default function QuotationDetail() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Quotation #</span>
-                  <span className="font-medium">{order.order_number}</span>
+                  <span className="font-medium">{order.quotation_number || order.order_number}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Submitted</span>

@@ -81,6 +81,7 @@ export default function MyOrders() {
     const q = search.toLowerCase()
     const matchesSearch =
       o.order_number?.toLowerCase().includes(q) ||
+      o.quotation_number?.toLowerCase().includes(q) ||
       o.destination_country?.toLowerCase().includes(q)
     return matchesStatus && matchesSearch
   })
