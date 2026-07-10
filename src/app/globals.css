@@ -3,6 +3,17 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --bg: #f3f4f6;
+  --surface: #FFFFFF;
+  --border: #e5e7eb;
+  --border-strong: #9ca3af;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+  --accent: #000000;
+  --tag-bg: #f9fafb;
+  --radius: 6px;
+  --radius-lg: 10px;
 }
 
 @theme inline {
@@ -17,7 +28,79 @@
    on white for dark-mode users, so it has been removed. */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #f3f4f6;
+  color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-1.5 px-3 h-9 rounded text-sm font-medium cursor-pointer transition-colors; border: 1px solid transparent; }
+  .btn:hover { opacity: 1; }
+  .btn-primary { background: #000; color: #fff; }
+  .btn-primary:hover { background: #1f2937; }
+  .btn-secondary { background: #fff; color: #374151; border-color: #d1d5db; }
+  .btn-secondary:hover { background: #f9fafb; }
+  .btn-ghost { background: #fff; color: #374151; border-color: #d1d5db; }
+  .btn-ghost:hover { background: #f9fafb; }
+  .btn-sm { @apply px-3 h-7 text-xs; }
+  .btn-danger { background: #dc2626; color: #fff; }
+
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.05); }
+  .card-pad { @apply p-5; }
+
+  .input {
+    width: 100%;
+    height: 36px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 0 10px;
+    font-size: 12px;
+    color: var(--text-primary);
+    outline: none;
+  }
+  .input:focus { border-color: #9ca3af; box-shadow: 0 0 0 2px rgb(156 163 175 / 0.35); }
+  textarea.input { height: auto; padding: 8px 10px; resize: vertical; }
+  select.input { cursor: pointer; }
+
+  .badge { @apply inline-flex items-center px-2 py-1 rounded text-xs font-medium border; }
+  .badge-gray { background: #f9fafb; color: #374151; border-color: #e5e7eb; }
+  .badge-dark { background: #111827; color: #fff; border-color: #111827; }
+  .badge-mid { background: #f9fafb; color: #374151; border-color: #e5e7eb; }
+  .badge-red { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+  .badge-green { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+  .badge-yellow { background: #fefce8; color: #a16207; border-color: #fef08a; }
+  .badge-blue { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+
+  .table-th { @apply px-3 py-3 text-left text-xs font-semibold uppercase; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+  .table-td { @apply px-3 py-3 text-sm; color: #4b5563; border-bottom: 1px solid #f3f4f6; }
+  tr:last-child .table-td { border-bottom: none; }
+  tr:hover .table-td { background: #f9fafb; }
+  .td-primary { font-weight: 600; color: #111827; }
+
+  .sidebar-item { @apply flex items-center gap-2 h-9 px-3 rounded text-sm font-medium cursor-pointer; color: #4b5563; }
+  .sidebar-item:hover { background: #f3f4f6; color: #111827; }
+  .sidebar-item.active { background: #000; color: #fff; font-weight: 600; }
+  .sidebar-dot { @apply w-1.5 h-1.5 rounded-full flex-shrink-0; background: #9ca3af; }
+  .sidebar-dot.active { background: #fff; }
+
+  .stat-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  }
+  .stat-val { @apply text-3xl font-semibold; color: #111827; }
+  .stat-lbl { @apply text-xs mt-3 font-semibold uppercase; color: #6b7280; }
+  .stat-sub { @apply text-sm mt-2; color: #6b7280; }
+
+  .section-label { @apply text-xs font-semibold uppercase tracking-widest mb-1; color: var(--text-tertiary); }
+  .divider { height: 1px; background: var(--border); }
+
+  .info-note { @apply text-xs px-3 py-2 rounded; background: #f9fafb; color: #6b7280; border: 1px solid #e5e7eb; }
+
+  .alert-banner { @apply flex items-start gap-3 p-4 rounded-lg border; }
+  .alert-warn { background: #fefce8; border-color: #fef08a; color: #854d0e; }
+  .alert-info { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
 }
