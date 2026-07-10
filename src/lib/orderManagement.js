@@ -12,6 +12,18 @@ const TABLES = [
   'shipments',
 ]
 
+const ID_COLUMNS = {
+  customers: ['id', 'uuid', 'customer_id'],
+  suppliers: ['id', 'uuid', 'supplier_id', 'vendor_id'],
+  customer_orders: ['id', 'uuid', 'customer_order_id', 'order_id'],
+  customer_order_items: ['id', 'uuid', 'customer_order_item_id', 'order_item_id'],
+  purchase_orders: ['id', 'uuid', 'purchase_order_id', 'po_id', 'order_id'],
+  purchase_order_items: ['id', 'uuid', 'purchase_order_item_id', 'po_item_id'],
+  products: ['id', 'uuid', 'product_id', 'sku'],
+  inventory_batches: ['id', 'uuid', 'inventory_batch_id', 'batch_id'],
+  shipments: ['id', 'uuid', 'shipment_id'],
+}
+
 const first = (record, keys, fallback = '') => {
   for (const key of keys) {
     if (record?.[key] !== undefined && record?.[key] !== null && record?.[key] !== '') {
@@ -21,8 +33,14 @@ const first = (record, keys, fallback = '') => {
   return fallback
 }
 
-export const idOf = (record) =>
-  first(record, ['id', 'uuid', 'customer_order_id', 'purchase_order_id', 'order_id'])
+const idKeysFor = (table) => ID_COLUMNS[table] || ['id', 'uuid']
+
+const idColumnOf = (record, table) => {
+  if (record?.idColumn) return record.idColumn
+  return idKeysFor(table).find((key) => record?.[key] !== undefined && record?.[key] !== null && record?.[key] !== '')
+}
+
+export const idOf = (record, table) => first(record, idKeysFor(table))
 
 export const formatDate = (value) => {
   if (!value) return 'Not set'
@@ -73,16 +91,25 @@ export function buildOrderManagementData(raw) {
   const products = raw.products || []
   const inventoryBatches = raw.inventory_batches || []
   const shipments = raw.shipments || []
+
+  const normalizedCustomers = customers.map((customer) => ({
+    ...customer,
+    id: idOf(customer, 'customers'),
+    idColumn: idColumnOf(customer, 'customers'),
+    name: first(customer, ['name', 'customer_name', 'company_name'], `Customer ${idOf(customer, 'customers')}`),
+  }))
+
   const normalizedSuppliers = suppliers.map((supplier) => ({
     ...supplier,
-    id: idOf(supplier),
+    id: idOf(supplier, 'suppliers'),
+    idColumn: idColumnOf(supplier, 'suppliers'),
     name: first(supplier, ['supplier_name', 'name', 'company_name', 'vendor_name'], `Supplier ${idOf(supplier)}`),
   }))
 
-  const customerById = new Map(customers.map((customer) => [String(idOf(customer)), customer]))
+  const customerById = new Map(normalizedCustomers.map((customer) => [String(customer.id), customer]))
   const supplierById = new Map(normalizedSuppliers.map((supplier) => [String(supplier.id), supplier]))
-  const customerOrderById = new Map(customerOrders.map((order) => [String(idOf(order)), order]))
-  const productById = new Map(products.map((product) => [String(idOf(product)), product]))
+  const customerOrderById = new Map(customerOrders.map((order) => [String(idOf(order, 'customer_orders')), order]))
+  const productById = new Map(products.map((product) => [String(idOf(product, 'products')), product]))
 
   const deliveredByPoItem = new Map()
   inventoryBatches.forEach((batch) => {
@@ -104,7 +131,8 @@ export function buildOrderManagementData(raw) {
 
     return {
       ...item,
-      id: idOf(item),
+      id: idOf(item, 'purchase_order_items'),
+      idColumn: idColumnOf(item, 'purchase_order_items'),
       purchaseOrderId: first(item, ['purchase_order_id', 'po_id']),
       customerOrderItemId: first(item, ['customer_order_item_id', 'order_item_id']),
       productName: first(product, ['name', 'product_name', 'description'], first(item, ['product_name', 'description'], 'Product')),
@@ -123,7 +151,7 @@ export function buildOrderManagementData(raw) {
   })
 
   const normalizedPurchaseOrders = purchaseOrders.map((po) => {
-    const poId = idOf(po)
+    const poId = idOf(po, 'purchase_orders')
     const items = purchaseItemsByPo.get(String(poId)) || []
     const ordered = items.reduce((sum, item) => sum + item.orderedQuantity, 0)
     const delivered = items.reduce((sum, item) => sum + item.deliveredQuantity, 0)
@@ -140,6 +168,7 @@ export function buildOrderManagementData(raw) {
     return {
       ...po,
       id: poId,
+      idColumn: idColumnOf(po, 'purchase_orders'),
       poNumber: first(po, ['po_number', 'purchase_order_number', 'order_number', 'reference_number'], `PO-${poId}`),
       supplierId,
       supplier,
@@ -161,7 +190,7 @@ export function buildOrderManagementData(raw) {
   })
 
   const normalizedCustomerOrders = customerOrders.map((order) => {
-    const orderId = idOf(order)
+    const orderId = idOf(order, 'customer_orders')
     const customer = customerById.get(String(first(order, ['customer_id'])))
     const items = (orderItemsByCustomerOrder.get(String(orderId)) || []).map((item) => {
       const product = productById.get(String(first(item, ['product_id'])))
@@ -170,7 +199,8 @@ export function buildOrderManagementData(raw) {
 
       return {
         ...item,
-        id: idOf(item),
+        id: idOf(item, 'customer_order_items'),
+        idColumn: idColumnOf(item, 'customer_order_items'),
         productName: first(product, ['name', 'product_name', 'description'], first(item, ['product_name', 'description'], 'Product')),
         quantity,
         unitPrice,
@@ -191,6 +221,7 @@ export function buildOrderManagementData(raw) {
     return {
       ...order,
       id: orderId,
+      idColumn: idColumnOf(order, 'customer_orders'),
       orderNumber: first(order, ['order_number', 'customer_order_number', 'reference_number'], `ORD-${orderId}`),
       customerName: first(customer, ['name', 'customer_name', 'company_name'], first(order, ['customer_name'], 'Customer')),
       contactInfo: first(customer, ['contact_info', 'email', 'phone', 'contact_number'], 'Not set'),
@@ -216,7 +247,7 @@ export function buildOrderManagementData(raw) {
   })
 
   return {
-    customers,
+    customers: normalizedCustomers,
     suppliers: normalizedSuppliers,
     customerOrders: normalizedCustomerOrders,
     purchaseOrders: normalizedPurchaseOrders,
@@ -240,12 +271,24 @@ export async function createRecord(table, payload) {
 }
 
 export async function updateRecord(table, id, payload) {
-  return writeRecord(payload, (nextPayload) => supabase.from(table).update(nextPayload).eq('id', id))
+  const target = mutationTarget(table, id)
+  return writeRecord(payload, (nextPayload) => supabase.from(table).update(nextPayload).eq(target.column, target.value))
 }
 
 export async function deleteRecord(table, id) {
-  const { error } = await supabase.from(table).delete().eq('id', id)
+  const target = mutationTarget(table, id)
+  const { error } = await supabase.from(table).delete().eq(target.column, target.value)
   if (error) throw new Error(error.message)
+}
+
+function mutationTarget(table, recordOrId) {
+  if (recordOrId && typeof recordOrId === 'object') {
+    const column = idColumnOf(recordOrId, table)
+    const value = idOf(recordOrId, table)
+    return { column: column || 'id', value }
+  }
+
+  return { column: 'id', value: recordOrId }
 }
 
 const missingColumnFrom = (message) => {

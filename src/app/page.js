@@ -36,10 +36,11 @@ export default function LoginPage() {
 
     const dashboardByRole = {
       admin: '/admin/dashboard',
-      sales: '/sales/dashboard',
-      management: '/management/dashboard',
-      procurement: '/procurement/dashboard',
+      management: '/admin/dashboard',
+      sales: '/order-management/customer-orders',
+      procurement: '/order-management/purchase-orders',
       warehouse: '/warehouse/dashboard',
+      supplier: '/supplier/dashboard',
       customer: '/customer/dashboard',
     }
     router.push(dashboardByRole[profile?.role] || '/customer/dashboard')
