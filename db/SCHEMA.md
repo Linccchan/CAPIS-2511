@@ -93,6 +93,14 @@ RLS is **enabled on all 21 tables**. Policy coverage as of the snapshot:
   `supplier_deliveries`, `supplier_delivery_items`, `supplier_performance`,
   `prediction_records`, `warehouse_locations`, `activity_logs`.
 
+> **Prepared, not yet applied:** migration `005` (supplier role + portal RLS)
+> and migration `007` (staff-module RLS: billings insert/update for
+> admin/sales; labeling/staging/warehouse_locations policies; warehouse
+> access to POs and order status) — `007` also **creates three tables the
+> staff screens expect** that never existed in the shared DB:
+> `notifications`, `sticker_designs`, `supplier_product_costs`. Run 005 then
+> 007, then `db/seed_demo.sql` for demo data.
+
 RLS helper functions live in the DB: `has_role(text[])`, `current_user_role()`,
 `customer_can_read_order()`, `customer_can_read_order_item()`,
 `customer_matches_current_user()`.
