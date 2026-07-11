@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { DESTINATION_COUNTRIES } from '@/lib/constants'
+import { COUNTRIES } from '@/lib/constants'
 
 export default function ProfileSettings() {
   const router = useRouter()
@@ -374,7 +374,7 @@ export default function ProfileSettings() {
                   className={`${inputClass} bg-white`}
                 >
                   <option value="">Select country...</option>
-                  {DESTINATION_COUNTRIES.map((c) => (
+                  {COUNTRIES.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
