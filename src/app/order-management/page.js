@@ -87,7 +87,7 @@ export default function OrderManagementDashboard() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="border-b border-gray-200 text-xs uppercase text-gray-500">
+                  <thead className="border-b border-gray-100 text-xs uppercase text-gray-400">
                     <tr>
                       <th className="py-3 pr-4">Order</th>
                       <th className="py-3 pr-4">Customer</th>
@@ -121,7 +121,7 @@ export default function OrderManagementDashboard() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="border-b border-gray-200 text-xs uppercase text-gray-500">
+                  <thead className="border-b border-gray-100 text-xs uppercase text-gray-400">
                     <tr>
                       <th className="py-3 pr-4">PO Number</th>
                       <th className="py-3 pr-4">Supplier</th>
@@ -156,7 +156,7 @@ export default function OrderManagementDashboard() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-gray-200 text-xs uppercase text-gray-500">
+                <thead className="border-b border-gray-100 text-xs uppercase text-gray-400">
                   <tr>
                     <th className="py-3 pr-4">Purchase Order</th>
                     <th className="py-3 pr-4">Supplier</th>

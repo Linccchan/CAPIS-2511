@@ -34,22 +34,16 @@ export default function LoginPage() {
       .eq('id', data.user.id)
       .single()
 
-    const roleHome = {
+    const dashboardByRole = {
       admin: '/admin/dashboard',
       management: '/admin/dashboard',
-      supplier: '/supplier/dashboard',
+      sales: '/order-management/customer-orders',
+      procurement: '/order-management/purchase-orders',
       warehouse: '/warehouse/dashboard',
-      customer: '/order-management/customer-orders',
+      supplier: '/supplier/dashboard',
+      customer: '/customer/dashboard',
     }
-
-    if (roleHome[profile?.role]) {
-      router.push(roleHome[profile.role])
-    } else {
-      await supabase.auth.signOut()
-      setError('This account does not have access to the system.')
-      setLoading(false)
-      return
-    }
+    router.push(dashboardByRole[profile?.role] || '/customer/dashboard')
 
     setLoading(false)
   }
