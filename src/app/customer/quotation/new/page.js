@@ -8,6 +8,12 @@ import Image from 'next/image'
 // Draft product ids shared with the product catalog via sessionStorage
 const STORAGE_KEY = 'dmc_quotation_request_ids'
 
+// DMC's active export markets (proposal §1.2.4)
+const DESTINATION_COUNTRIES = [
+  'Hong Kong', 'Macau', 'Taiwan', 'Japan',
+  'Australia', 'New Zealand', 'Canada', 'Guam',
+]
+
 export default function RequestQuotation() {
   const router = useRouter()
   const [customer, setCustomer] = useState(null)
@@ -320,13 +326,16 @@ export default function RequestQuotation() {
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Destination Country</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Hong Kong"
+                  <select
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black"
-                  />
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black bg-white"
+                  >
+                    <option value="">Select destination country...</option>
+                    {DESTINATION_COUNTRIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Preferred Ship Date (Optional)</label>
