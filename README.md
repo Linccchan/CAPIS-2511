@@ -1,40 +1,46 @@
-<<<<<<< HEAD
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# CAPIS-2511 — Export Consolidation System for DMC Enterprise
 
-## Getting Started
+Capstone project (BS IS / BS IT, De La Salle University – Manila): a custom
+export consolidation information system with predictive analytics for DMC
+Enterprise, a Philippine FMCG export consolidator. The system extends DMC's
+existing Odoo ERP with customer self-service ordering, multi-supplier order
+consolidation monitoring, warehouse staging and labeling tracking, billing and
+payment verification, and shipment-readiness prediction.
 
-First, run the development server:
+## Stack
+
+- **Frontend:** Next.js (App Router, JavaScript) + React, TailwindCSS
+- **Backend / DB:** Supabase (PostgreSQL, Auth, Row-Level Security)
+- **Analytics:** TensorFlow.js (on-device predictions)
+- **Hosting:** Vercel
+- **ERP integration:** Odoo via JSON-RPC (accounting/billing sync)
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Requires a `.env.local`
+with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Database
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The schema-of-record lives in [`db/schema.sql`](db/schema.sql) with reference
+documentation in [`db/SCHEMA.md`](db/SCHEMA.md). Incremental changes are in
+[`db/migrations/`](db/migrations) and are applied manually through the
+Supabase SQL editor.
 
-## Learn More
+## Modules
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-=======
-# CAPIS-2511
->>>>>>> 318e83009bb252e62a86d581c946c7017ce1a547
+1. **Customer Interaction** — catalog, quotation requests, PFI review and
+   approval, order tracking, documents (complete)
+2. **Order Management** — staff quotation/PFI builder, purchase orders,
+   multi-supplier consolidation monitoring
+3. **Supplier & Warehouse Management** — deliveries, storage locations,
+   labeling and staging
+4. **Predictive Analytics** — shipment-readiness estimates, supplier
+   reliability scoring
+5. **Billing & Payment** — billing records, telegraphic-transfer verification,
+   Odoo sync
