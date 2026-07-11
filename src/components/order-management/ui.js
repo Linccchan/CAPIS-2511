@@ -29,11 +29,11 @@ export function ToastProvider({ children }) {
             key={toast.id}
             className={`rounded border px-4 py-3 text-sm shadow-md ${
               toast.type === 'error'
-                ? 'border-red-200 bg-red-50 text-red-700'
-                : 'border-green-200 bg-green-50 text-green-700'
+                ? 'border-red-200 bg-red-50 text-red-600'
+                : 'border-gray-200 bg-white text-gray-900'
             }`}
           >
-            {toast.message}
+            {toast.type === 'error' ? '' : '✓ '}{toast.message}
           </div>
         ))}
       </div>
@@ -53,76 +53,47 @@ export function OrderShell({ children, title, description }) {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
-      <div className="flex min-h-screen">
-        <aside className="hidden w-64 border-r border-gray-200 bg-white lg:block">
-          <div className="border-b border-gray-200 px-6 py-5">
-            <div className="flex items-center gap-3">
-              <Image src="/dmc-logo.png" alt="DMC Enterprise Logo" width={42} height={42} />
-              <div>
-                <div className="text-lg font-semibold leading-tight">CAPIS</div>
-                <div className="text-xs text-gray-500">Order Console</div>
-              </div>
-            </div>
-          </div>
-          <nav className="space-y-1 p-4">
-            {navItems.map(([label, href]) => {
-              const active = pathname === href || (href !== '/order-management' && pathname.startsWith(href))
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`block rounded px-3 py-2 text-sm font-medium ${
-                    active ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`}
-                >
-                  {label}
-                </Link>
-              )
-            })}
-          </nav>
-          <div className="mx-4 mt-4 rounded border border-gray-200 bg-gray-50 p-4">
-            <div className="text-xs font-semibold uppercase text-gray-500">Admin Access</div>
-            <Link href="/admin/dashboard" className="mt-2 inline-flex text-sm font-medium text-gray-900 hover:underline">
-              Return to dashboard
-            </Link>
-          </div>
-        </aside>
+    <div className="min-h-screen bg-gray-100 flex">
 
-        <main className="flex min-w-0 flex-1 flex-col">
-          <header className="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">Export Consolidation System</p>
-                <h1 className="mt-1 text-xl font-semibold text-gray-900">{title}</h1>
-                <p className="mt-1 text-sm text-gray-500">{description}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {navItems.map(([label, href]) => {
-                  const active = pathname === href || (href !== '/order-management' && pathname.startsWith(href))
-                  return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`rounded border px-3 py-2 text-xs font-medium lg:hidden ${
-                      active ? 'border-black bg-black text-white' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                  )
-                })}
-                <Link
-                  href="/admin/dashboard"
-                  className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Admin Dashboard
-                </Link>
-              </div>
-            </div>
-          </header>
-          <div className="flex-1 p-4 sm:p-6 lg:p-8">{children}</div>
-        </main>
+      {/* Sidebar — matches the customer module shell */}
+      <div className="w-56 bg-white border-r border-gray-200 flex flex-col p-4 fixed h-full">
+        <div className="flex items-center gap-2 mb-8">
+          <Image src="/dmc-logo.png" alt="DMC" width={36} height={36} />
+          <span className="font-semibold text-sm">DMC Export</span>
+        </div>
+        <p className="text-xs text-gray-400 uppercase mb-2">Order Management</p>
+        <nav className="flex flex-col gap-1">
+          {navItems.map(([label, href]) => {
+            const active = pathname === href || (href !== '/order-management' && pathname.startsWith(href))
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`text-left text-sm px-3 py-2 rounded ${active ? 'font-semibold text-black bg-gray-50' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                • {label}
+              </Link>
+            )
+          })}
+        </nav>
+        <div className="mt-auto">
+          <p className="text-xs text-gray-400 uppercase mb-2">Admin</p>
+          <Link
+            href="/admin/dashboard"
+            className="block text-left text-sm px-3 py-2 rounded text-gray-600 hover:bg-gray-100"
+          >
+            • Admin Dashboard
+          </Link>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="ml-56 flex-1 p-8">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+          <p className="text-sm text-gray-500">{description}</p>
+        </div>
+        {children}
       </div>
     </div>
   )
@@ -130,36 +101,38 @@ export function OrderShell({ children, title, description }) {
 
 export function Card({ title, action, children }) {
   return (
-    <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
+    <section className="bg-white rounded-lg border border-gray-200 p-5">
       {(title || action) && (
-        <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4">
-          <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-semibold text-gray-900">{title}</h2>
           {action}
         </div>
       )}
-      <div className="p-5">{children}</div>
+      {children}
     </section>
   )
 }
 
 export function StatCard({ label, value }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="text-xs font-semibold uppercase text-gray-500">{label}</div>
-      <div className="mt-3 text-3xl font-semibold text-gray-900">{value}</div>
+    <div className="bg-white rounded-lg p-5 border border-gray-200">
+      <p className="text-3xl font-bold text-gray-900">{value}</p>
+      <p className="text-sm text-gray-500 mt-1">{label}</p>
     </div>
   )
 }
 
+// Monochrome badges matching the customer module: the "highlight" state is
+// black-filled, everything else is gray. Tone names kept for compatibility.
 export function Badge({ children, tone = 'gray' }) {
   const tones = {
-    green: 'bg-green-50 text-green-700 border-green-200',
-    yellow: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    red: 'bg-red-50 text-red-700 border-red-200',
-    black: 'bg-gray-900 text-white border-gray-900',
-    gray: 'bg-gray-50 text-gray-700 border-gray-200',
+    green: 'bg-black text-white',
+    black: 'bg-black text-white',
+    yellow: 'bg-gray-200 text-gray-700',
+    red: 'bg-gray-200 text-gray-700',
+    gray: 'bg-gray-200 text-gray-700',
   }
-  return <span className={`inline-flex rounded border px-2 py-1 text-xs font-medium ${tones[tone]}`}>{children}</span>
+  return <span className={`inline-flex px-2 py-1 rounded text-xs font-medium ${tones[tone] || tones.gray}`}>{children}</span>
 }
 
 export function statusTone(status) {
@@ -184,9 +157,9 @@ export function ProgressBar({ value }) {
 
 export function EmptyState({ title = 'No records found', description = 'New records will appear here once they are available.' }) {
   return (
-    <div className="rounded border border-dashed border-gray-300 p-8 text-center">
-      <div className="text-sm font-semibold text-gray-900">{title}</div>
-      <p className="mt-1 text-sm text-gray-500">{description}</p>
+    <div className="py-6 text-center">
+      <p className="text-sm text-gray-400">{title}</p>
+      <p className="text-xs text-gray-400 mt-1">{description}</p>
     </div>
   )
 }

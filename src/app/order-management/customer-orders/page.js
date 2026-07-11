@@ -139,7 +139,7 @@ export default function CustomerOrdersPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-gray-200 text-xs uppercase text-gray-500">
+                <thead className="border-b border-gray-100 text-xs uppercase text-gray-400">
                   <tr>
                     <th className="py-3 pr-4">Order Number</th>
                     <th className="py-3 pr-4">Customer Name</th>
