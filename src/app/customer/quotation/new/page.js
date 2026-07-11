@@ -8,18 +8,13 @@ import Image from 'next/image'
 // Draft product ids shared with the product catalog via sessionStorage
 const STORAGE_KEY = 'dmc_quotation_request_ids'
 
-// DMC's active export markets (proposal §1.2.4)
-const DESTINATION_COUNTRIES = [
-  'Hong Kong', 'Macau', 'Taiwan', 'Japan',
-  'Australia', 'New Zealand', 'Canada', 'Guam',
-]
-
 export default function RequestQuotation() {
   const router = useRouter()
   const [customer, setCustomer] = useState(null)
   const [products, setProducts] = useState([])
   const [selectedItems, setSelectedItems] = useState([])
-  const [destination, setDestination] = useState('')
+  const [locations, setLocations] = useState([])
+  const [selectedLocationId, setSelectedLocationId] = useState('')
   const [preferredDate, setPreferredDate] = useState('')
   const [specialInstructions, setSpecialInstructions] = useState('')
   const [loading, setLoading] = useState(true)
@@ -39,6 +34,20 @@ export default function RequestQuotation() {
         .single()
 
       setCustomer(customerData)
+
+      if (customerData) {
+        // Destination comes from the customer's saved delivery locations
+        const { data: locationsData } = await supabase
+          .from('customer_locations')
+          .select('*')
+          .eq('customer_id', customerData.id)
+          .order('created_at', { ascending: true })
+
+        const locs = locationsData || []
+        setLocations(locs)
+        const preselect = locs.find((l) => l.is_default) || (locs.length === 1 ? locs[0] : null)
+        if (preselect) setSelectedLocationId(preselect.id)
+      }
 
       const { data: productsData } = await supabase
         .from('products')
@@ -115,8 +124,15 @@ export default function RequestQuotation() {
   const totalWeight = selectedItems.reduce((sum, i) => sum + ((i.unit_weight_kg || 0) * i.quantity_ordered), 0)
   const totalQty = selectedItems.reduce((sum, i) => sum + i.quantity_ordered, 0)
 
+  const selectedLocation = locations.find((l) => l.id === selectedLocationId)
+  const today = new Date().toISOString().split('T')[0]
+
   const handleSubmit = async () => {
-    if (!customer || selectedItems.length === 0 || !destination) return
+    if (!customer || selectedItems.length === 0 || !selectedLocation) return
+    if (preferredDate && preferredDate < today) {
+      alert('Preferred ship date cannot be in the past.')
+      return
+    }
     setSubmitting(true)
 
     const { data: orderNumber, error: numberError } = await supabase
@@ -135,7 +151,8 @@ export default function RequestQuotation() {
         customer_id: customer.id,
         order_number: orderNumber,
         quotation_number: orderNumber,
-        destination_country: destination,
+        destination_country: selectedLocation.country,
+        delivery_location_id: selectedLocation.id,
         preferred_ship_date: preferredDate || null,
         special_instructions: specialInstructions || null,
         status: 'submitted',
@@ -325,22 +342,37 @@ export default function RequestQuotation() {
               <h2 className="font-semibold text-gray-900 mb-4">Shipment details</h2>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Destination Country</label>
-                  <select
-                    value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black bg-white"
-                  >
-                    <option value="">Select destination country...</option>
-                    {DESTINATION_COUNTRIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Deliver To</label>
+                  {locations.length === 0 ? (
+                    <div className="text-sm text-gray-500 border border-gray-200 rounded px-3 py-2 bg-gray-50">
+                      No delivery locations saved yet.{' '}
+                      <button
+                        onClick={() => router.push('/customer/profile')}
+                        className="underline hover:text-gray-700"
+                      >
+                        Add one in Profile &amp; Settings
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedLocationId}
+                      onChange={(e) => setSelectedLocationId(e.target.value)}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black bg-white"
+                    >
+                      <option value="">Select delivery location...</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.label} — {loc.country}{loc.is_default ? ' (default)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Preferred Ship Date (Optional)</label>
                   <input
                     type="date"
+                    min={today}
                     value={preferredDate}
                     onChange={(e) => setPreferredDate(e.target.value)}
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black"
@@ -383,13 +415,13 @@ export default function RequestQuotation() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Destination</span>
-                  <span className="font-medium">{destination || '—'}</span>
+                  <span className="font-medium">{selectedLocation ? selectedLocation.country : '—'}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-400 mb-4">Pricing will be included in the pro forma invoice prepared by DMC. You will be notified once it is ready for your review.</p>
               <button
                 onClick={handleSubmit}
-                disabled={submitting || selectedItems.length === 0 || !destination}
+                disabled={submitting || selectedItems.length === 0 || !selectedLocationId}
                 className="w-full bg-black text-white py-2 rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Submitting...' : 'Submit quotation request →'}

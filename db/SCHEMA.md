@@ -13,7 +13,7 @@ known gaps between the code and the database.
 
 | Module | Tables |
 |--------|--------|
-| Auth / core | `profiles`, `customers`, `products`, `suppliers` |
+| Auth / core | `profiles`, `customers`, `customer_locations` (migration 006), `products`, `suppliers` |
 | 1 — Customer Interaction | `customer_orders`, `customer_order_items` |
 | 2 — Order Management / procurement | `purchase_orders`, `purchase_order_items`, `supplier_deliveries`, `supplier_delivery_items` |
 | 3 — Supplier & Warehouse | `warehouse_locations`, `inventory_batches`, `labeling_tasks`, `staging_tasks`, `shipments` |
