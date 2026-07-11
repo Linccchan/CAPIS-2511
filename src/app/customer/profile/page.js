@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { DESTINATION_COUNTRIES } from '@/lib/constants'
 
 export default function ProfileSettings() {
   const router = useRouter()
@@ -29,6 +30,12 @@ export default function ProfileSettings() {
   // Password
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+
+  // Delivery locations
+  const [locations, setLocations] = useState([])
+  const [newLocLabel, setNewLocLabel] = useState('')
+  const [newLocCountry, setNewLocCountry] = useState('')
+  const [newLocAddress, setNewLocAddress] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,6 +65,15 @@ export default function ProfileSettings() {
       setCompanyPhone(customerData?.phone || '')
       setCountry(customerData?.country || '')
       setAddress(customerData?.address || '')
+
+      if (customerData) {
+        const { data: locationsData } = await supabase
+          .from('customer_locations')
+          .select('*')
+          .eq('customer_id', customerData.id)
+          .order('created_at', { ascending: true })
+        setLocations(locationsData || [])
+      }
 
       setLoading(false)
     }
@@ -119,6 +135,78 @@ export default function ProfileSettings() {
       notify('Password updated.')
       setNewPassword('')
       setConfirmPassword('')
+    }
+    setSaving('')
+  }
+
+  const reloadLocations = async () => {
+    const { data } = await supabase
+      .from('customer_locations')
+      .select('*')
+      .eq('customer_id', customer.id)
+      .order('created_at', { ascending: true })
+    setLocations(data || [])
+  }
+
+  const addLocation = async () => {
+    if (!newLocLabel.trim() || !newLocCountry) {
+      notifyError('Location name and country are required.')
+      return
+    }
+    setSaving('location')
+    const { error: insertError } = await supabase
+      .from('customer_locations')
+      .insert({
+        customer_id: customer.id,
+        label: newLocLabel.trim(),
+        country: newLocCountry,
+        address: newLocAddress.trim() || null,
+        is_default: locations.length === 0,
+      })
+
+    if (insertError) notifyError('Error: ' + insertError.message)
+    else {
+      notify('Delivery location added.')
+      setNewLocLabel('')
+      setNewLocCountry('')
+      setNewLocAddress('')
+      await reloadLocations()
+    }
+    setSaving('')
+  }
+
+  const removeLocation = async (id) => {
+    setSaving('location')
+    const { error: deleteError } = await supabase
+      .from('customer_locations')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      notifyError(
+        deleteError.message.includes('violates foreign key')
+          ? 'This location is used by an existing order and cannot be removed.'
+          : 'Error: ' + deleteError.message
+      )
+    } else {
+      notify('Delivery location removed.')
+      await reloadLocations()
+    }
+    setSaving('')
+  }
+
+  const setDefaultLocation = async (id) => {
+    setSaving('location')
+    await supabase.from('customer_locations').update({ is_default: false }).eq('customer_id', customer.id)
+    const { error: updateError } = await supabase
+      .from('customer_locations')
+      .update({ is_default: true })
+      .eq('id', id)
+
+    if (updateError) notifyError('Error: ' + updateError.message)
+    else {
+      notify('Default delivery location updated.')
+      await reloadLocations()
     }
     setSaving('')
   }
@@ -223,6 +311,91 @@ export default function ProfileSettings() {
               className="bg-black text-white text-sm px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
             >
               {saving === 'company' ? 'Saving...' : 'Save company profile'}
+            </button>
+          </div>
+
+          {/* Delivery locations */}
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <h2 className="font-semibold text-gray-900 mb-1">Delivery locations</h2>
+            <p className="text-xs text-gray-400 mb-4">Your warehouses or facilities. Quotation requests ship to one of these locations.</p>
+
+            {locations.length === 0 ? (
+              <p className="text-sm text-gray-400 mb-4">No delivery locations yet. Add your first one below — it will be used as the destination on quotation requests.</p>
+            ) : (
+              <div className="divide-y divide-gray-100 mb-4">
+                {locations.map((loc) => (
+                  <div key={loc.id} className="flex items-center gap-3 py-3">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {loc.label}
+                        {loc.is_default && (
+                          <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-black text-white">Default</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500">{loc.country}{loc.address ? ` · ${loc.address}` : ''}</p>
+                    </div>
+                    {!loc.is_default && (
+                      <button
+                        onClick={() => setDefaultLocation(loc.id)}
+                        disabled={saving === 'location'}
+                        className="text-xs border border-gray-300 px-2 py-1 rounded hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Set default
+                      </button>
+                    )}
+                    <button
+                      onClick={() => removeLocation(loc.id)}
+                      disabled={saving === 'location'}
+                      className="text-red-400 hover:text-red-600 text-xs disabled:opacity-50"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 mb-4 border-t border-gray-100 pt-4">
+              <div>
+                <label className={labelClass}>Location Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Main warehouse — Kowloon"
+                  value={newLocLabel}
+                  onChange={(e) => setNewLocLabel(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Country</label>
+                <select
+                  value={newLocCountry}
+                  onChange={(e) => setNewLocCountry(e.target.value)}
+                  className={`${inputClass} bg-white`}
+                >
+                  <option value="">Select country...</option>
+                  {DESTINATION_COUNTRIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className={labelClass}>Address (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="Street, district, city..."
+                  value={newLocAddress}
+                  onChange={(e) => setNewLocAddress(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <button
+              onClick={addLocation}
+              disabled={saving === 'location' || !customer}
+              className="bg-black text-white text-sm px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
+            >
+              {saving === 'location' ? 'Saving...' : '+ Add delivery location'}
             </button>
           </div>
 

@@ -57,6 +57,21 @@ create table customers (
   created_at        timestamptz default now()
 );
 
+-- Customer delivery locations (migration 006) — destinations for quotation
+-- requests come from this pre-saved list, not free text.
+create table customer_locations (
+  id          uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references customers (id),
+  label       text not null,
+  country     text not null,
+  address     text,
+  is_default  boolean not null default false,
+  created_at  timestamptz default now(),
+  constraint customer_locations_country_check
+    check (country in ('Hong Kong', 'Macau', 'Taiwan', 'Japan',
+                       'Australia', 'New Zealand', 'Canada', 'Guam'))
+);
+
 create table products (
   id                  uuid primary key default gen_random_uuid(),
   product_name        text not null,
@@ -79,7 +94,8 @@ create table customer_orders (
   customer_id           uuid not null references customers (id),
   order_number          text not null,                 -- QT-YYYY-NNN, renamed ORD-YYYY-NNN on approval
   quotation_number      text,                          -- added 2026-07-09 (migration 004); keeps the QT- number
-  destination_country   text,
+  destination_country   text,                          -- denormalized from the chosen location
+  delivery_location_id  uuid references customer_locations (id),  -- added 2026-07-11 (migration 006)
   preferred_ship_date   date,                          -- added 2026-07-08 (migration 001)
   special_instructions  text,                          -- added 2026-07-08 (migration 001)
   status                text not null default 'draft',
