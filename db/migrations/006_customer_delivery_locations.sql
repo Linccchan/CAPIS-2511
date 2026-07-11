@@ -8,6 +8,9 @@
 -- reference and the denormalized country (existing screens and the staff
 -- modules keep reading destination_country unchanged).
 
+-- v2: country is intentionally NOT restricted to DMC's current export
+-- markets — a new customer can come from a new country. Standardization is
+-- handled by the country dropdown in the UI (src/lib/constants.js).
 create table if not exists customer_locations (
   id          uuid primary key default gen_random_uuid(),
   customer_id uuid not null references customers (id),
@@ -15,11 +18,12 @@ create table if not exists customer_locations (
   country     text not null,
   address     text,
   is_default  boolean not null default false,
-  created_at  timestamptz default now(),
-  constraint customer_locations_country_check
-    check (country in ('Hong Kong', 'Macau', 'Taiwan', 'Japan',
-                       'Australia', 'New Zealand', 'Canada', 'Guam'))
+  created_at  timestamptz default now()
 );
+
+-- Self-heal databases that ran v1 of this migration (which had a CHECK
+-- restricting country to the 8 current markets)
+alter table customer_locations drop constraint if exists customer_locations_country_check;
 
 alter table customer_locations enable row level security;
 
@@ -88,12 +92,11 @@ alter table customer_orders
   add column if not exists delivery_location_id uuid references customer_locations (id);
 
 -- Backfill: give every existing customer a default location from their
--- profile country (only where it matches a valid market)
+-- profile country
 insert into customer_locations (customer_id, label, country, address, is_default)
 select c.id, 'Main warehouse', c.country, c.address, true
 from customers c
-where c.country in ('Hong Kong', 'Macau', 'Taiwan', 'Japan',
-                    'Australia', 'New Zealand', 'Canada', 'Guam')
+where c.country is not null
   and not exists (
     select 1 from customer_locations cl where cl.customer_id = c.id
   );
