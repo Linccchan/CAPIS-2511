@@ -298,7 +298,16 @@ export default function ProfileSettings() {
               </div>
               <div>
                 <label className={labelClass}>Country</label>
-                <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} className={inputClass} />
+                <select
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className={`${inputClass} bg-white`}
+                >
+                  <option value="">Select country...</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className={labelClass}>Address</label>
