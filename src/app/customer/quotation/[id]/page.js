@@ -8,7 +8,7 @@ import Image from 'next/image'
 export default function QuotationDetail() {
   const router = useRouter()
   const params = useParams()
-  const orderId = params.id
+  const orderRef = params.id
 
   const [order, setOrder] = useState(null)
   const [orderItems, setOrderItems] = useState([])
@@ -21,33 +21,58 @@ export default function QuotationDetail() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      const { data: orderData } = await supabase
+      let { data: orderData } = await supabase
         .from('customer_orders')
         .select('*')
-        .eq('id', orderId)
-        .single()
+        .eq('id', orderRef)
+        .maybeSingle()
+
+      if (!orderData) {
+        const { data } = await supabase
+          .from('customer_orders')
+          .select('*')
+          .eq('quotation_number', orderRef)
+          .maybeSingle()
+        orderData = data
+      }
+
+      if (!orderData) {
+        const { data } = await supabase
+          .from('customer_orders')
+          .select('*')
+          .eq('order_number', orderRef)
+          .maybeSingle()
+        orderData = data
+      }
 
       setOrder(orderData)
+
+      if (!orderData?.id) {
+        setOrderItems([])
+        setBilling(null)
+        setLoading(false)
+        return
+      }
 
       const { data: itemsData } = await supabase
         .from('customer_order_items')
         .select('*, products(product_name)')
-        .eq('order_id', orderId)
+        .eq('order_id', orderData.id)
 
       setOrderItems(itemsData || [])
 
       const { data: billingData } = await supabase
         .from('billings')
         .select('*, profiles(full_name)')
-        .eq('order_id', orderId)
-        .single()
+        .eq('order_id', orderData.id)
+        .maybeSingle()
 
       setBilling(billingData)
       setLoading(false)
     }
 
     fetchData()
-  }, [orderId])
+  }, [orderRef, router])
 
   const getStepNumber = (status) => {
     if (status === 'submitted') return billing ? 3 : 2
@@ -66,7 +91,7 @@ export default function QuotationDetail() {
 
   const handleApprove = async () => {
     setApproving(true)
-    const { error } = await supabase.rpc('approve_quotation', { p_order_id: orderId })
+    const { error } = await supabase.rpc('approve_quotation', { p_order_id: order.id })
     if (error) {
       console.error('Approve error:', JSON.stringify(error))
       alert('Error: ' + error.message)
@@ -76,7 +101,7 @@ export default function QuotationDetail() {
     const { data: orderData } = await supabase
       .from('customer_orders')
       .select('*')
-      .eq('id', orderId)
+      .eq('id', order.id)
       .single()
     setOrder(orderData)
     setApproving(false)
@@ -176,7 +201,7 @@ export default function QuotationDetail() {
             <div className="bg-white rounded-lg border border-gray-200 p-5 mb-4">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="font-semibold text-gray-900">
-                  Pro forma invoice — {billing ? `PFI-${billing.billing_number}` : 'Pending'}
+                  Pro forma invoice — {billing ? billing.billing_number : 'Pending'}
                 </h2>
                 {billing && (
                   <button className="text-sm border border-gray-300 px-3 py-1 rounded hover:bg-gray-50">

@@ -10,6 +10,7 @@ const TABLES = [
   'products',
   'inventory_batches',
   'shipments',
+  'billings',
 ]
 
 const ID_COLUMNS = {
@@ -22,6 +23,7 @@ const ID_COLUMNS = {
   products: ['id', 'uuid', 'product_id', 'sku'],
   inventory_batches: ['id', 'uuid', 'inventory_batch_id', 'batch_id'],
   shipments: ['id', 'uuid', 'shipment_id'],
+  billings: ['id', 'uuid', 'billing_id'],
 }
 
 const first = (record, keys, fallback = '') => {
@@ -91,6 +93,7 @@ export function buildOrderManagementData(raw) {
   const products = raw.products || []
   const inventoryBatches = raw.inventory_batches || []
   const shipments = raw.shipments || []
+  const billings = raw.billings || []
 
   const normalizedCustomers = customers.map((customer) => ({
     ...customer,
@@ -110,6 +113,11 @@ export function buildOrderManagementData(raw) {
   const supplierById = new Map(normalizedSuppliers.map((supplier) => [String(supplier.id), supplier]))
   const customerOrderById = new Map(customerOrders.map((order) => [String(idOf(order, 'customer_orders')), order]))
   const productById = new Map(products.map((product) => [String(idOf(product, 'products')), product]))
+  const billingByOrderId = new Map(billings.map((billing) => [String(first(billing, ['order_id'])), {
+    ...billing,
+    id: idOf(billing, 'billings'),
+    idColumn: idColumnOf(billing, 'billings'),
+  }]))
 
   const deliveredByPoItem = new Map()
   inventoryBatches.forEach((batch) => {
@@ -217,6 +225,20 @@ export function buildOrderManagementData(raw) {
       : isCompleteStatus(first(order, ['status'])) ? 100 : 0
     const completionStatus = progress >= 100 ? 'Ready for Shipment' : 'Awaiting Supplier Deliveries'
     const shipment = shipments.find((entry) => String(first(entry, ['customer_order_id', 'order_id'])) === String(orderId))
+    const billing = billingByOrderId.get(String(orderId)) || null
+    const rawStatus = String(first(order, ['status'], '')).toLowerCase()
+    const validUntil = billing?.valid_until ? new Date(billing.valid_until) : null
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const pfiState = rawStatus === 'submitted'
+      ? validUntil && validUntil < today
+        ? 'Expired'
+        : billing
+          ? 'Sent to customer'
+          : 'Pending review'
+      : rawStatus === 'cancelled'
+        ? 'Cancelled'
+        : 'Approved'
 
     return {
       ...order,
@@ -234,6 +256,8 @@ export function buildOrderManagementData(raw) {
       progress,
       completionStatus,
       shipment,
+      billing,
+      pfiState,
     }
   })
 

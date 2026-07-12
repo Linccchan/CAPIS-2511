@@ -89,8 +89,13 @@ export default function CustomerOrderDetailsPage() {
 
   return (
     <OrderShell title="Order Details" description="Customer information, ordered products, supplier progress, and shipment readiness.">
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <Link href="/order-management/customer-orders" className="text-sm font-medium text-gray-700 hover:underline">Back to customer orders</Link>
+        {order && String(order.status || '').toLowerCase() === 'submitted' && (
+          <Link href={`/order-management/customer-orders/${order.id}/pfi`} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
+            {order.billing ? 'Update PFI' : 'Build PFI'}
+          </Link>
+        )}
       </div>
 
       {loading ? (
@@ -99,7 +104,7 @@ export default function CustomerOrderDetailsPage() {
         <Card><EmptyState title="Order not found" description="The selected customer order could not be found." /></Card>
       ) : (
         <div className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <Card title="Overall Completion">
               <div className="space-y-4">
                 <div>
@@ -113,6 +118,7 @@ export default function CustomerOrderDetailsPage() {
             <Card title="Order Date"><div className="text-sm text-gray-700">{formatDate(order.orderDate)}</div></Card>
             <Card title="Expected Shipment"><div className="text-sm text-gray-700">{formatDate(order.expectedShipmentDate)}</div></Card>
             <Card title="Linked Purchase Orders"><div className="text-2xl font-semibold text-gray-900">{order.linkedPurchaseOrders.length}</div></Card>
+            <Card title="PFI State"><Badge tone={order.billing ? 'black' : 'gray'}>{order.pfiState}</Badge></Card>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">

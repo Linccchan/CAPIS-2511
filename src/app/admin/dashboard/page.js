@@ -68,6 +68,7 @@ export default function AdminDashboard() {
       title: 'Operations',
       items: [
         { title: 'Order Management', description: 'Customer orders, purchase orders, and supplier delivery readiness.', href: '/order-management' },
+        { title: 'PFI Builder', description: 'Prepare pro forma invoices for submitted quotation requests.', href: '/order-management/customer-orders' },
         { title: 'Purchase Orders', description: 'Monitor supplier purchase orders and overdue delivery status.', href: '/admin/purchase-orders' },
         { title: 'Suppliers', description: 'Review supplier profiles, performance, and active purchase orders.', href: '/admin/suppliers' },
       ],
