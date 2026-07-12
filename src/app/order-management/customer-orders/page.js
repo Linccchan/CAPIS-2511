@@ -134,7 +134,7 @@ export default function CustomerOrdersPage() {
             </select>
           </div>
 
-          {loading ? <TableSkeleton cols={7} /> : orders.length === 0 ? (
+          {loading ? <TableSkeleton cols={8} /> : orders.length === 0 ? (
             <EmptyState title="No matching customer orders" />
           ) : (
             <div className="overflow-x-auto">
@@ -145,6 +145,7 @@ export default function CustomerOrdersPage() {
                     <th className="py-3 pr-4">Customer Name</th>
                     <th className="py-3 pr-4">Order Date</th>
                     <th className="py-3 pr-4">Status</th>
+                    <th className="py-3 pr-4">PFI</th>
                     <th className="py-3 pr-4">Total Items</th>
                     <th className="py-3 pr-4">Expected Shipment</th>
                     <th className="py-3">Actions</th>
@@ -157,11 +158,15 @@ export default function CustomerOrdersPage() {
                       <td className="py-3 pr-4 text-gray-600">{order.customerName}</td>
                       <td className="py-3 pr-4 text-gray-600">{formatDate(order.orderDate)}</td>
                       <td className="py-3 pr-4"><Badge tone={statusTone(order.status)}>{order.status}</Badge></td>
+                      <td className="py-3 pr-4"><Badge tone={order.billing ? 'black' : 'gray'}>{order.pfiState}</Badge></td>
                       <td className="py-3 pr-4">{order.totalItems}</td>
                       <td className="py-3 pr-4 text-gray-600">{formatDate(order.expectedShipmentDate)}</td>
                       <td className="py-3">
                         <div className="flex gap-2">
                           <Link href={`/order-management/customer-orders/${order.id}`} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">View</Link>
+                          {order.status.toLowerCase() === 'submitted' && (
+                            <Link href={`/order-management/customer-orders/${order.id}/pfi`} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">PFI</Link>
+                          )}
                           <button onClick={() => openEdit(order)} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">Edit</button>
                           <button onClick={() => setDeleteTarget(order)} className="rounded bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700">Delete</button>
                         </div>

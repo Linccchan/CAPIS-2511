@@ -32,6 +32,7 @@ const NAV = {
         { label: 'Order Management', href: '/order-management' },
       ] },
       { title: 'Operations', items: [
+        { label: 'PFI Builder', href: '/order-management/customer-orders' },
         { label: 'Purchase Orders', href: '/admin/purchase-orders' },
         { label: 'Suppliers', href: '/admin/suppliers' },
       ] },
@@ -52,6 +53,7 @@ const NAV = {
         { label: 'Order Management', href: '/order-management' },
       ] },
       { title: 'Operations', items: [
+        { label: 'PFI Builder', href: '/order-management/customer-orders' },
         { label: 'Purchase Orders', href: '/admin/purchase-orders' },
         { label: 'Suppliers', href: '/admin/suppliers' },
       ] },
