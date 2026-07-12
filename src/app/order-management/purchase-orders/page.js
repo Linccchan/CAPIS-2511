@@ -91,6 +91,19 @@ export default function PurchaseOrdersPage() {
         toast?.show(result.skippedColumns.length ? `Purchase order updated. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Purchase order updated.')
       } else {
         result = await createRecord('purchase_orders', payload)
+
+        fetch('/api/send-po-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            supplierEmail: form.supplier_id ? suppliers.find((s) => s.id === form.supplier_id)?.email : '',
+            supplierName: 'Company',
+            poNumber: form.po_number,
+          }),
+        })
+
         toast?.show(result.skippedColumns.length ? `Purchase order created. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Purchase order created.')
       }
       resetForm()
