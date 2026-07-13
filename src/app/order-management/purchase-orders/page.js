@@ -17,6 +17,7 @@ export default function PurchaseOrdersPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [query, setQuery] = useState('')
   const [form, setForm] = useState(blankForm)
   const [editing, setEditing] = useState(null)
@@ -63,7 +64,6 @@ export default function PurchaseOrdersPage() {
     setForm({
       order_id: po.customerOrderId || '',
       supplier_id: po.supplierId || '',
-      po_number: po.poNumber,
       expected_delivery_date: po.expectedDelivery ? String(po.expectedDelivery).slice(0, 10) : '',
       status: po.status,
     })
@@ -90,7 +90,7 @@ export default function PurchaseOrdersPage() {
         result = await updateRecord('purchase_orders', editing.id, payload)
         toast?.show(result.skippedColumns.length ? `Purchase order updated. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Purchase order updated.')
       } else {
-        result = await createRecord('purchase_orders', payload)
+        const result = await createRecord('purchase_orders', payload)
 
         fetch('/api/send-po-email', {
           method: 'POST',
@@ -98,9 +98,9 @@ export default function PurchaseOrdersPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            supplierEmail: form.supplier_id ? suppliers.find((s) => s.id === form.supplier_id)?.email : '',
-            supplierName: 'Company',
-            poNumber: form.po_number,
+            supplierEmail: suppliers.find((s) => s.id === form.supplier_id)?.email,
+            supplierName: form.supplier_id ? suppliers.find((s) => s.id === form.supplier_id)?.name : '',
+            poNumber: result.data.po_number,
           }),
         })
 
@@ -116,7 +116,7 @@ export default function PurchaseOrdersPage() {
   }
 
   const remove = async () => {
-    setSaving(true)
+    setDeleting(true)
     try {
       await deleteRecord('purchase_orders', deleteTarget.id)
       toast?.show('Purchase order deleted.')
@@ -125,7 +125,7 @@ export default function PurchaseOrdersPage() {
     } catch (error) {
       toast?.show(error.message, 'error')
     } finally {
-      setSaving(false)
+      setDeleting(false)
     }
   }
 
@@ -190,9 +190,7 @@ export default function PurchaseOrdersPage() {
                 ))}
               </select>
             </label>
-            <label className="block text-sm font-medium text-gray-700">Purchase Order Number
-              <input value={form.po_number} onChange={(event) => setForm({ ...form, po_number: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
-            </label>
+
             <label className="block text-sm font-medium text-gray-700">Supplier
               <select value={form.supplier_id} onChange={(event) => setForm({ ...form, supplier_id: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
                 <option value="">Select supplier</option>
@@ -214,13 +212,27 @@ export default function PurchaseOrdersPage() {
               </select>
             </label>
             <div className="flex gap-2">
-              <Button disabled={saving}>{saving ? 'Saving...' : editing ? 'Update PO' : 'Create PO'}</Button>
-              {editing && <Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button>}
+              <Button
+                disabled={saving || deleting}
+                className={
+                  saving || deleting
+                    ? "bg-gray-400 hover:bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-black hover:bg-gray-800 text-white"
+                }
+              >
+                {deleting ? 'Deleting...' : saving ? 'Saving...' : editing ? 'Update PO' : 'Create PO'}
+              </Button>
+
+              {editing && (
+                <Button type="button" variant="secondary" onClick={resetForm} className="bg-gray-200 hover:bg-gray-300 text-gray-800">
+                  Cancel
+                </Button>
+              )}
             </div>
           </form>
         </Card>
       </div>
-      <ConfirmDialog open={Boolean(deleteTarget)} title="Delete purchase order?" message="This removes the selected purchase order record. This action cannot be undone." loading={saving} onCancel={() => setDeleteTarget(null)} onConfirm={remove} />
+      <ConfirmDialog open={Boolean(deleteTarget)} title="Delete purchase order?" message="This removes the selected purchase order record. This action cannot be undone." loading={deleting} onCancel={() => setDeleteTarget(null)} onConfirm={remove} />
     </OrderShell>
   )
 }
