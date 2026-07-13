@@ -291,7 +291,38 @@ export function buildOrderManagementData(raw) {
 }
 
 export async function createRecord(table, payload) {
-  return writeRecord(payload, (nextPayload) => supabase.from(table).insert(nextPayload))
+  let nextPayload = { ...payload }
+
+  // Auto-generate Purchase Order Number
+  if (table === 'purchase_orders') {
+    const year = new Date().getFullYear()
+
+    const { data: latestPO, error } = await supabase
+      .from('purchase_orders')
+      .select('po_number')
+      .ilike('po_number', `PO-${year}-%`)
+      .order('po_number', { ascending: false })
+      .limit(1)
+
+    if (error) throw new Error(error.message)
+
+    let nextNumber = 901
+
+    if (latestPO && latestPO.length > 0) {
+      const current = parseInt(latestPO[0].po_number.split('-')[2], 10)
+      nextNumber = current + 1
+    }
+
+    nextPayload.po_number = `PO-${year}-${nextNumber}`
+  }
+
+  return writeRecord(nextPayload, (payload) =>
+    supabase
+      .from(table)
+      .insert(payload)
+      .select()
+      .single()
+  )
 }
 
 export async function updateRecord(table, id, payload) {
@@ -325,8 +356,14 @@ async function writeRecord(payload, write) {
   const skippedColumns = []
 
   while (Object.keys(nextPayload).length > 0) {
-    const { error } = await write(nextPayload)
-    if (!error) return { skippedColumns }
+    const { data, error } = await write(nextPayload)
+
+    if (!error) {
+      return {
+        data,
+        skippedColumns,
+      }
+    }
 
     const missingColumn = missingColumnFrom(error.message)
     if (!missingColumn || !(missingColumn in nextPayload)) {
