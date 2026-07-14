@@ -293,7 +293,6 @@ export function buildOrderManagementData(raw) {
 export async function createRecord(table, payload) {
   let nextPayload = { ...payload }
 
-  // Auto-generate Purchase Order Number
   if (table === 'purchase_orders') {
     const year = new Date().getFullYear()
 
@@ -330,9 +329,35 @@ export async function updateRecord(table, id, payload) {
   return writeRecord(payload, (nextPayload) => supabase.from(table).update(nextPayload).eq(target.column, target.value))
 }
 
+
 export async function deleteRecord(table, id) {
+  if (table === 'suppliers') {
+    const { count, error: countError } = await supabase
+      .from('purchase_orders')
+      .select('*', {
+        count: 'exact',
+        head: true,
+      })
+      .eq('supplier_id', id)
+
+    if (countError) {
+      throw new Error(countError.message)
+    }
+
+    if (count > 0) {
+      throw new Error(
+        `This supplier cannot be deleted because it has ${count} purchase order${count > 1 ? 's' : ''} associated with it.`
+      )
+    }
+  }
+
   const target = mutationTarget(table, id)
-  const { error } = await supabase.from(table).delete().eq(target.column, target.value)
+
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq(target.column, target.value)
+
   if (error) throw new Error(error.message)
 }
 
@@ -375,4 +400,27 @@ async function writeRecord(payload, write) {
   }
 
   throw new Error('No valid columns were available to save this record.')
+}
+
+export async function importSuppliers(rows) {
+  const { error } = await supabase
+    .from("suppliers")
+    .insert(rows)
+
+  if (error) throw new Error(error.message)
+}
+
+export async function fetchSuppliers() {
+  const { data, error } = await supabase
+    .from('suppliers')
+    .select(
+      '*, supplier_performance(average_lead_time_days, late_delivery_count, total_purchase_orders, reliability_score), purchase_orders(id, status)'
+    )
+    .order('supplier_name')
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return data || []
 }
