@@ -16,6 +16,7 @@ export default function SuppliersPage() {
   const [supplierToDelete, setSupplierToDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [editingSupplier, setEditingSupplier] = useState(null)
   const [csvRows, setCsvRows] = useState([])
   const [importing, setImporting] = useState(false)
 
@@ -43,20 +44,38 @@ export default function SuppliersPage() {
     }
   }, [])
 
+
   async function handleSave(e) {
     e.preventDefault()
 
     try {
-      await createRecord('suppliers', {
-        supplier_name: form.supplier_name,
-        supplier_type: form.supplier_type,
-        contact_person: form.contact_person,
-        email: form.email,
-        phone: form.phone,
-        address: form.address,
-      })
+      if (editingSupplier) {
+        const { error } = await supabase
+          .from('suppliers')
+          .update({
+            supplier_name: form.supplier_name,
+            supplier_type: form.supplier_type,
+            contact_person: form.contact_person,
+            email: form.email,
+            phone: form.phone,
+            address: form.address,
+          })
+          .eq('id', editingSupplier.id)
 
-      setShowModal(false)
+        if (error) throw error
+      } else {
+        await createRecord('suppliers', {
+          supplier_name: form.supplier_name,
+          supplier_type: form.supplier_type,
+          contact_person: form.contact_person,
+          email: form.email,
+          phone: form.phone,
+          address: form.address,
+        })
+      }
+
+      const data = await fetchOrderManagementData()
+      setSuppliers(data.suppliers)
 
       setForm({
         supplier_name: '',
@@ -67,11 +86,26 @@ export default function SuppliersPage() {
         address: '',
       })
 
-      const data = await fetchOrderManagementData()
-      setSuppliers(data.suppliers)
+      setEditingSupplier(null)
+      setShowModal(false)
     } catch (err) {
       alert(err.message)
     }
+  }
+
+  function handleEdit(supplier) {
+    setEditingSupplier(supplier)
+
+    setForm({
+      supplier_name: supplier.supplier_name || '',
+      supplier_type: supplier.supplier_type || 'manufacturer',
+      contact_person: supplier.contact_person || '',
+      email: supplier.email || '',
+      phone: supplier.phone || '',
+      address: supplier.address || '',
+    })
+
+    setShowModal(true)
   }
 
 
@@ -224,6 +258,13 @@ export default function SuppliersPage() {
                         View
                       </button>
 
+                      <button
+                        className="rounded border border-blue-200 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50"
+                        onClick={() => handleEdit(supplier)}
+                      >
+                        Edit
+                      </button>
+
                       <button className="rounded border border-red-200 px-3 py-1 text-sm text-red-600 hover:bg-red-50"
                         onClick={() => {
                           setSupplierToDelete(supplier)
@@ -245,7 +286,9 @@ export default function SuppliersPage() {
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
-              <h2 className="mb-6 text-xl font-semibold">Add Supplier</h2>
+              <h2 className="mb-6 text-xl font-semibold">
+                {editingSupplier ? "Edit Supplier" : "Add Supplier"}
+              </h2>
 
               <form onSubmit={handleSave}>
                 <div className="grid grid-cols-2 gap-4">
@@ -343,7 +386,18 @@ export default function SuppliersPage() {
                 <div className="mt-6 flex justify-end gap-3">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false)
+                      setEditingSupplier(null)
+                      setForm({
+                        supplier_name: '',
+                        supplier_type: 'manufacturer',
+                        contact_person: '',
+                        email: '',
+                        phone: '',
+                        address: '',
+                      })
+                    }}
                     className="rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-100"
                   >
                     Cancel
@@ -353,7 +407,7 @@ export default function SuppliersPage() {
                     type="submit"
                     className="rounded-md bg-black px-4 py-2 text-white hover:bg-gray-800"
                   >
-                    Save Supplier
+                    {editingSupplier ? "Update Supplier" : "Save Supplier"}
                   </button>
                 </div>
               </form>

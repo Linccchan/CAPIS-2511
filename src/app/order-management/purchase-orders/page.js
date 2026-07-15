@@ -206,9 +206,9 @@ export default function PurchaseOrdersPage() {
             </label>
             <label className="block text-sm font-medium text-gray-700">Status
               <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
-                <option>Pending</option>
-                <option>Partially Delivered</option>
-                <option>Delivered</option>
+                <option value="pending">Pending</option>
+                <option value="partially_delivered">Partially Delivered</option>
+                <option value="delivered">Delivered</option>
               </select>
             </label>
             <div className="flex gap-2">
