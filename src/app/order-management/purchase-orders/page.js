@@ -98,9 +98,7 @@ export default function PurchaseOrdersPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            supplierEmail: suppliers.find((s) => s.id === form.supplier_id)?.email,
-            supplierName: form.supplier_id ? suppliers.find((s) => s.id === form.supplier_id)?.name : '',
-            poNumber: result.data.po_number,
+            purchaseOrderId: result.data.id,
           }),
         })
 
