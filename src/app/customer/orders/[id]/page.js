@@ -13,7 +13,16 @@ export default function OrderDetail() {
   const [order, setOrder] = useState(null)
   const [orderItems, setOrderItems] = useState([])
   const [activity, setActivity] = useState([])
+  const [billing, setBilling] = useState(null)
+  const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Balance payment form
+  const [payBank, setPayBank] = useState('BDO')
+  const [payAmount, setPayAmount] = useState('')
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0])
+  const [proofFile, setProofFile] = useState(null)
+  const [submittingPayment, setSubmittingPayment] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,6 +53,24 @@ export default function OrderDetail() {
         .order('created_at', { ascending: false })
 
       setActivity(activityData || [])
+
+      const { data: billingData } = await supabase
+        .from('billings')
+        .select('*')
+        .eq('order_id', orderId)
+        .maybeSingle()
+
+      setBilling(billingData)
+      if (billingData) {
+        setPayAmount(billingData.balance_amount ? String(billingData.balance_amount) : '')
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('billing_id', billingData.id)
+          .order('created_at', { ascending: false })
+        setPayments(paymentsData || [])
+      }
+
       setLoading(false)
     }
 
@@ -81,6 +108,57 @@ export default function OrderDetail() {
 
   const formatDateTime = (d) =>
     d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'
+
+  const handleSubmitBalance = async () => {
+    if (!proofFile) { alert('Please attach your telegraphic transfer slip.'); return }
+    const amount = parseFloat(payAmount)
+    if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return }
+    setSubmittingPayment(true)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    const ext = proofFile.name.split('.').pop()
+    const proofPath = `${user.id}/${order.id}-balance-${Date.now()}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('payment-proofs')
+      .upload(proofPath, proofFile)
+
+    if (uploadError) {
+      alert('Upload error: ' + uploadError.message)
+      setSubmittingPayment(false)
+      return
+    }
+
+    const { error: paymentError } = await supabase
+      .from('payments')
+      .insert({
+        billing_id: billing.id,
+        payment_type: 'balance',
+        bank_name: payBank,
+        amount,
+        payment_date: payDate,
+        proof_file_path: proofPath,
+        status: 'pending',
+      })
+
+    if (paymentError) {
+      alert('Error: ' + paymentError.message)
+      setSubmittingPayment(false)
+      return
+    }
+
+    const { data: paymentsData } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('billing_id', billing.id)
+      .order('created_at', { ascending: false })
+    setPayments(paymentsData || [])
+    setProofFile(null)
+    setSubmittingPayment(false)
+  }
+
+  const balancePayment = payments.find((p) => p.payment_type === 'balance' && p.status !== 'rejected')
+  const balanceDue = billing && (order?.status === 'shipped' || order?.status === 'completed')
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -175,6 +253,67 @@ export default function OrderDetail() {
             <span className="text-gray-500"> · Bill of lading will be sent upon dispatch</span>
           </div>
         </div>
+
+        {/* Balance payment — due once shipped (after bill of lading) */}
+        {balanceDue && (
+          <div className="bg-white rounded-lg border border-gray-200 p-5 mb-6">
+            {balancePayment ? (
+              <>
+                <h2 className="font-semibold text-gray-900 mb-3">Balance payment {balancePayment.status === 'verified' ? 'received' : 'submitted'}</h2>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Amount</span>
+                    <span className="font-medium">${Number(balancePayment.amount).toFixed(2)} via {balancePayment.bank_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${balancePayment.status === 'verified' ? 'bg-black text-white' : 'bg-gray-200 text-gray-700'}`}>
+                      {balancePayment.status === 'verified' ? 'Verified — fully paid' : 'Pending verification'}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="font-semibold text-gray-900 mb-3">Balance payment due</h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  Your shipment is on its way and the bill of lading has been issued. Please send the remaining
+                  balance of <span className="font-medium text-gray-900">${billing.balance_amount?.toFixed(2) || '—'}</span> via
+                  telegraphic transfer and record it below.
+                </p>
+                <div className="grid grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Bank</label>
+                    <select value={payBank} onChange={(e) => setPayBank(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black bg-white">
+                      <option value="BDO">BDO</option>
+                      <option value="Chinabank">Chinabank</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Amount (USD)</label>
+                    <input type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Payment Date</label>
+                    <input type="date" max={new Date().toISOString().split('T')[0]} value={payDate} onChange={(e) => setPayDate(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Transfer Slip</label>
+                    <input type="file" accept="image/*,.pdf" onChange={(e) => setProofFile(e.target.files?.[0] || null)} className="w-full text-sm text-gray-600 file:mr-3 file:border file:border-gray-300 file:rounded file:px-3 file:py-1.5 file:text-sm file:bg-white file:text-gray-700 hover:file:bg-gray-50" />
+                  </div>
+                </div>
+                <button
+                  onClick={handleSubmitBalance}
+                  disabled={submittingPayment}
+                  className="bg-black text-white px-6 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {submittingPayment ? 'Submitting...' : 'Submit balance payment →'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-6">
 

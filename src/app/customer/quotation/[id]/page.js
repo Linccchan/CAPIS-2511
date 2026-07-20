@@ -13,8 +13,16 @@ export default function QuotationDetail() {
   const [order, setOrder] = useState(null)
   const [orderItems, setOrderItems] = useState([])
   const [billing, setBilling] = useState(null)
+  const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [approving, setApproving] = useState(false)
+
+  // Payment form
+  const [payBank, setPayBank] = useState('BDO')
+  const [payAmount, setPayAmount] = useState('')
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0])
+  const [proofFile, setProofFile] = useState(null)
+  const [submittingPayment, setSubmittingPayment] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,6 +76,17 @@ export default function QuotationDetail() {
         .maybeSingle()
 
       setBilling(billingData)
+
+      if (billingData) {
+        setPayAmount(billingData.down_payment_required ? String(billingData.down_payment_required) : '')
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('billing_id', billingData.id)
+          .order('created_at', { ascending: false })
+        setPayments(paymentsData || [])
+      }
+
       setLoading(false)
     }
 
@@ -106,6 +125,58 @@ export default function QuotationDetail() {
     setOrder(orderData)
     setApproving(false)
   }
+
+  const handleSubmitPayment = async () => {
+    if (!proofFile) { alert('Please attach your telegraphic transfer slip.'); return }
+    const amount = parseFloat(payAmount)
+    if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return }
+    setSubmittingPayment(true)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    const ext = proofFile.name.split('.').pop()
+    const proofPath = `${user.id}/${order.id}-down_payment-${Date.now()}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('payment-proofs')
+      .upload(proofPath, proofFile)
+
+    if (uploadError) {
+      console.error('Upload error:', JSON.stringify(uploadError))
+      alert('Upload error: ' + uploadError.message)
+      setSubmittingPayment(false)
+      return
+    }
+
+    const { error: paymentError } = await supabase
+      .from('payments')
+      .insert({
+        billing_id: billing.id,
+        payment_type: 'down_payment',
+        bank_name: payBank,
+        amount,
+        payment_date: payDate,
+        proof_file_path: proofPath,
+        status: 'pending',
+      })
+
+    if (paymentError) {
+      console.error('Payment error:', JSON.stringify(paymentError))
+      alert('Error: ' + paymentError.message)
+      setSubmittingPayment(false)
+      return
+    }
+
+    const { data: paymentsData } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('billing_id', billing.id)
+      .order('created_at', { ascending: false })
+    setPayments(paymentsData || [])
+    setProofFile(null)
+    setSubmittingPayment(false)
+  }
+
+  const dpPayment = payments.find((p) => p.payment_type === 'down_payment' && p.status !== 'rejected')
 
   const steps = ['Submitted', 'DMC prepared PFI', 'Your approval', 'Down payment', 'Order confirmed']
 
@@ -281,11 +352,96 @@ export default function QuotationDetail() {
 
             {billing && order.status === 'awaiting_down_payment' && (
               <div className="bg-white rounded-lg border border-gray-200 p-5">
-                <h2 className="font-semibold text-gray-900 mb-3">Quotation approved — down payment required</h2>
-                <p className="text-sm text-gray-500">
-                  Please send the 50% down payment of <span className="font-medium text-gray-900">${billing.down_payment_required?.toFixed(2) || '—'}</span> via
-                  telegraphic transfer (BDO or Chinabank). DMC will verify your payment and begin procurement.
-                </p>
+                {dpPayment ? (
+                  <>
+                    <h2 className="font-semibold text-gray-900 mb-3">Down payment submitted</h2>
+                    <p className="text-sm text-gray-500 mb-3">
+                      {dpPayment.status === 'verified'
+                        ? 'Your down payment has been verified. DMC is starting procurement.'
+                        : 'DMC is verifying your payment. Procurement begins once it is confirmed.'}
+                    </p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Amount</span>
+                        <span className="font-medium">${Number(dpPayment.amount).toFixed(2)} via {dpPayment.bank_name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Payment date</span>
+                        <span className="font-medium">{dpPayment.payment_date ? new Date(dpPayment.payment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Status</span>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${dpPayment.status === 'verified' ? 'bg-black text-white' : 'bg-gray-200 text-gray-700'}`}>
+                          {dpPayment.status === 'verified' ? 'Verified' : 'Pending Verification'}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="font-semibold text-gray-900 mb-3">Quotation approved — record your down payment</h2>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Send the 50% down payment of <span className="font-medium text-gray-900">${billing.down_payment_required?.toFixed(2) || '—'}</span> via
+                      telegraphic transfer (BDO or Chinabank), then record it below with your transfer slip. DMC will verify and begin procurement.
+                    </p>
+                    {payments.some((p) => p.status === 'rejected') && (
+                      <div className="bg-red-50 text-red-600 text-sm p-3 rounded mb-4">
+                        Your previous payment record was rejected. Please check the details and submit again, or contact DMC.
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Bank</label>
+                        <select
+                          value={payBank}
+                          onChange={(e) => setPayBank(e.target.value)}
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black bg-white"
+                        >
+                          <option value="BDO">BDO</option>
+                          <option value="Chinabank">Chinabank</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Amount (USD)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={payAmount}
+                          onChange={(e) => setPayAmount(e.target.value)}
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Payment Date</label>
+                        <input
+                          type="date"
+                          max={new Date().toISOString().split('T')[0]}
+                          value={payDate}
+                          onChange={(e) => setPayDate(e.target.value)}
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Transfer Slip (Image or PDF)</label>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                          className="w-full text-sm text-gray-600 file:mr-3 file:border file:border-gray-300 file:rounded file:px-3 file:py-1.5 file:text-sm file:bg-white file:text-gray-700 hover:file:bg-gray-50"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSubmitPayment}
+                      disabled={submittingPayment}
+                      className="bg-black text-white px-6 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      {submittingPayment ? 'Submitting...' : 'Submit payment record →'}
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

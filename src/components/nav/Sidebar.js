@@ -33,6 +33,7 @@ const NAV = {
       ] },
       { title: 'Operations', items: [
         { label: 'PFI Builder', href: '/order-management/customer-orders' },
+        { label: 'Billing & Payments', href: '/order-management/billing' },
         { label: 'Purchase Orders', href: '/admin/purchase-orders' },
         { label: 'Suppliers', href: '/admin/suppliers' },
       ] },
@@ -54,6 +55,7 @@ const NAV = {
       ] },
       { title: 'Operations', items: [
         { label: 'PFI Builder', href: '/order-management/customer-orders' },
+        { label: 'Billing & Payments', href: '/order-management/billing' },
         { label: 'Purchase Orders', href: '/admin/purchase-orders' },
         { label: 'Suppliers', href: '/admin/suppliers' },
       ] },

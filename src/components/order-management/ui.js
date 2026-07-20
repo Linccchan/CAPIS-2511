@@ -50,6 +50,7 @@ export function OrderShell({ children, title, description }) {
     ['Customer Orders', '/order-management/customer-orders'],
     ['Purchase Orders', '/order-management/purchase-orders'],
     ['Supplier Deliveries', '/order-management/supplier-deliveries'],
+    ['Billing & Payments', '/order-management/billing'],
   ]
 
   return (
