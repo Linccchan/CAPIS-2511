@@ -88,14 +88,24 @@ export default function PfiBuilderPage() {
     }
 
     const pricedItems = order.items.map((item) => ({ item, unitPrice: Number(prices[item.id]) }))
-    const invalidItem = pricedItems.find(({ unitPrice }) => !Number.isFinite(unitPrice) || unitPrice < 0)
+    const invalidItem = pricedItems.find(({ unitPrice }) => !Number.isFinite(unitPrice) || unitPrice <= 0)
     if (invalidItem) {
-      toast?.show('Enter a valid USD unit price for every line item.', 'error')
+      toast?.show('Every line item needs a USD unit price greater than zero.', 'error')
+      return
+    }
+
+    if (!Number.isFinite(shipping) || shipping < 0) {
+      toast?.show('Shipping must be zero or a positive amount.', 'error')
       return
     }
 
     if (!validUntil) {
       toast?.show('Select an expiry date for this PFI.', 'error')
+      return
+    }
+
+    if (validUntil < new Date().toISOString().slice(0, 10)) {
+      toast?.show('The PFI expiry date cannot be in the past.', 'error')
       return
     }
 
@@ -230,6 +240,7 @@ export default function PfiBuilderPage() {
                 <label className="block text-sm font-medium text-gray-700">Expires
                   <input
                     type="date"
+                    min={new Date().toISOString().slice(0, 10)}
                     value={validUntil}
                     onChange={(event) => setValidUntil(event.target.value)}
                     className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400"

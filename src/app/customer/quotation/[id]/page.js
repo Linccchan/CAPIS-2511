@@ -128,8 +128,13 @@ export default function QuotationDetail() {
 
   const handleSubmitPayment = async () => {
     if (!proofFile) { alert('Please attach your telegraphic transfer slip.'); return }
+    if (proofFile.size > 10 * 1024 * 1024) { alert('File is too large — maximum 10 MB.'); return }
     const amount = parseFloat(payAmount)
-    if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return }
+    const required = Number(billing?.down_payment_required || 0)
+    if (!amount || Math.abs(amount - required) > 0.005) {
+      alert(`The down payment is fixed at $${required.toFixed(2)} (50% of the PFI total).`)
+      return
+    }
     setSubmittingPayment(true)
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -177,6 +182,9 @@ export default function QuotationDetail() {
   }
 
   const dpPayment = payments.find((p) => p.payment_type === 'down_payment' && p.status !== 'rejected')
+  const todayStr = new Date().toISOString().split('T')[0]
+  const pfiExpired = Boolean(billing?.valid_until && billing.valid_until < todayStr)
+  const hasUnpricedItems = orderItems.some((i) => i.unit_price == null)
 
   const steps = ['Submitted', 'DMC prepared PFI', 'Your approval', 'Down payment', 'Order confirmed']
 
@@ -336,17 +344,32 @@ export default function QuotationDetail() {
             {/* Approve Section */}
             {billing && order.status === 'submitted' && (
               <div className="bg-white rounded-lg border border-gray-200 p-5">
-                <h2 className="font-semibold text-gray-900 mb-3">Approve this quotation</h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  By approving, you confirm the products and quantities listed above. DMC will proceed with procurement after receiving your down payment.
-                </p>
-                <button
-                  onClick={handleApprove}
-                  disabled={approving}
-                  className="bg-black text-white px-6 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
-                >
-                  {approving ? 'Approving...' : 'Approve quotation →'}
-                </button>
+                {pfiExpired ? (
+                  <>
+                    <h2 className="font-semibold text-gray-900 mb-3">This quotation has expired</h2>
+                    <p className="text-sm text-gray-500">
+                      The pro forma invoice was valid until {new Date(billing.valid_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.
+                      Supplier prices may have changed — please contact DMC for a refreshed quotation before approving.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="font-semibold text-gray-900 mb-3">Approve this quotation</h2>
+                    <p className="text-sm text-gray-500 mb-4">
+                      By approving, you confirm the products and quantities listed above. DMC will proceed with procurement after receiving your down payment.
+                    </p>
+                    {hasUnpricedItems && (
+                      <p className="text-sm text-gray-400 mb-4">Some items have not been priced yet — approval is disabled until DMC completes the PFI.</p>
+                    )}
+                    <button
+                      onClick={handleApprove}
+                      disabled={approving || hasUnpricedItems}
+                      className="bg-black text-white px-6 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      {approving ? 'Approving...' : 'Approve quotation →'}
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
@@ -406,12 +429,11 @@ export default function QuotationDetail() {
                         <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Amount (USD)</label>
                         <input
                           type="number"
-                          min="0"
-                          step="0.01"
                           value={payAmount}
-                          onChange={(e) => setPayAmount(e.target.value)}
-                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black"
+                          readOnly
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-600 bg-gray-50 cursor-not-allowed"
                         />
+                        <p className="text-xs text-gray-400 mt-1">Fixed at 50% of the PFI total.</p>
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Payment Date</label>

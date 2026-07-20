@@ -39,8 +39,10 @@ export default function StagingPage() {
         }
         loadTasks();
     }, [selectedOrderId, supabase]);
-    async function updateStaged(id, qty) {
-        await supabase.from('staging_tasks').update({ staged_quantity: qty }).eq('id', id);
+    async function updateStaged(id, qty, requiredQty) {
+        // Staged quantity is bounded by what the order actually requires
+        const clamped = Math.max(0, Math.min(Number(qty) || 0, Number(requiredQty)));
+        await supabase.from('staging_tasks').update({ staged_quantity: clamped }).eq('id', id);
     }
     async function markComplete(taskId, requiredQty) {
         setSaving(true);
@@ -130,7 +132,7 @@ export default function StagingPage() {
                         </span>
                       </td>
                       <td className="table-td" style={{ textAlign: 'right' }}>
-                        {staged ? (<span style={{ fontWeight: 500 }}>{t.staged_quantity} {t.products?.unit}</span>) : (<input type="number" min="0" max={t.required_quantity} className="input" style={{ width: 70, textAlign: 'right' }} defaultValue={t.staged_quantity} onBlur={e => updateStaged(t.id, Number(e.target.value))}/>)}
+                        {staged ? (<span style={{ fontWeight: 500 }}>{t.staged_quantity} {t.products?.unit}</span>) : (<input type="number" min="0" max={t.required_quantity} className="input" style={{ width: 70, textAlign: 'right' }} defaultValue={t.staged_quantity} onBlur={e => updateStaged(t.id, Number(e.target.value), t.required_quantity)}/>)}
                       </td>
                       <td className="table-td" style={{ textAlign: 'center' }}>
                         <span style={{ fontSize: 14 }}>{stickerDone ? '✓' : '○'}</span>

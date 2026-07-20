@@ -111,8 +111,13 @@ export default function OrderDetail() {
 
   const handleSubmitBalance = async () => {
     if (!proofFile) { alert('Please attach your telegraphic transfer slip.'); return }
+    if (proofFile.size > 10 * 1024 * 1024) { alert('File is too large — maximum 10 MB.'); return }
     const amount = parseFloat(payAmount)
-    if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return }
+    const required = Number(billing?.balance_amount || 0)
+    if (!amount || Math.abs(amount - required) > 0.005) {
+      alert(`The balance payment is fixed at $${required.toFixed(2)} as stated on the PFI.`)
+      return
+    }
     setSubmittingPayment(true)
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -292,7 +297,8 @@ export default function OrderDetail() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Amount (USD)</label>
-                    <input type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black" />
+                    <input type="number" value={payAmount} readOnly className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-600 bg-gray-50 cursor-not-allowed" />
+                    <p className="text-xs text-gray-400 mt-1">Remaining 50% per the PFI.</p>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Payment Date</label>

@@ -53,7 +53,8 @@ export default function LogDeliveryPage() {
         setSaving(true);
         const { data: { user } } = await supabase.auth.getUser();
         for (const item of items) {
-            const actualQty = Number(item.actual_qty);
+            // Accepted quantity cannot be negative or exceed what the supplier dispatched
+            const actualQty = Math.max(0, Math.min(Number(item.actual_qty) || 0, Number(item.quantity_delivered)));
             await supabase.from('supplier_delivery_items').update({
                 quantity_accepted: actualQty,
                 condition_status: item.condition,
