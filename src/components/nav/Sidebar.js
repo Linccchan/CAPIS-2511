@@ -42,6 +42,10 @@ const NAV = {
       ] },
       { title: 'Catalog', items: [
         { label: 'Supplier Costs', href: '/admin/supplier-costs' },
+        { label: 'Products', href: '/admin/products' },
+      ] },
+      { title: 'Customer', items: [
+        { label: 'Customers', href: '/admin/customers' },
       ] },
     ],
   },
@@ -63,6 +67,10 @@ const NAV = {
       ] },
       { title: 'Catalog', items: [
         { label: 'Supplier Costs', href: '/admin/supplier-costs' },
+        { label: 'Products', href: '/admin/products' },
+      ] },
+      { title: 'Customer', items: [
+        { label: 'Customers', href: '/admin/customers' },
       ] },
     ],
   },
