@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createRecord, deleteRecord, fetchOrderManagementData, formatDate, updateRecord } from '@/lib/orderManagement'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, OrderShell, ProgressBar, TableSkeleton, statusTone, useToast } from '@/components/order-management/ui'
+import { supabase } from '@/lib/supabaseClient'
 
 const blankForm = {
   order_id: '',
@@ -74,44 +75,87 @@ export default function PurchaseOrdersPage() {
     setForm(blankForm)
   }
 
-  const save = async (event) => {
-    event.preventDefault()
-    setSaving(true)
-    try {
-      if (!form.order_id) {
-        throw new Error('Select a customer order before creating a purchase order.')
-      }
-      if (!form.supplier_id) {
-        throw new Error('Select a supplier before creating a purchase order.')
-      }
-      const payload = Object.fromEntries(Object.entries(form).filter(([, value]) => value !== ''))
-      let result
-      if (editing) {
-        result = await updateRecord('purchase_orders', editing.id, payload)
-        toast?.show(result.skippedColumns.length ? `Purchase order updated. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Purchase order updated.')
-      } else {
-        const result = await createRecord('purchase_orders', payload)
 
-        fetch('/api/send-po-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            purchaseOrderId: result.data.id,
-          }),
-        })
+const save = async (event) => {
+  event.preventDefault()
+  setSaving(true)
 
-        toast?.show(result.skippedColumns.length ? `Purchase order created. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.` : 'Purchase order created.')
-      }
-      resetForm()
-      await refresh()
-    } catch (error) {
-      toast?.show(error.message, 'error')
-    } finally {
-      setSaving(false)
+  try {
+    if (!form.order_id) {
+      throw new Error('Select a customer order before creating a purchase order.')
     }
+
+    if (!form.supplier_id) {
+      throw new Error('Select a supplier before creating a purchase order.')
+    }
+
+    const payload = Object.fromEntries(
+      Object.entries(form).filter(([, value]) => value !== '')
+    )
+
+    let result
+
+    if (editing) {
+      result = await updateRecord('purchase_orders', editing.id, payload)
+
+      toast?.show(
+        result.skippedColumns.length
+          ? `Purchase order updated. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.`
+          : 'Purchase order updated.'
+      )
+    } else {
+      // Create Purchase Order
+      result = await createRecord('purchase_orders', payload)
+
+      // Copy customer order items into purchase order items
+      const { data: orderItems, error: orderItemsError } = await supabase
+        .from('customer_order_items')
+        .select('product_id, quantity_ordered')
+        .eq('order_id', form.order_id)
+
+      if (orderItemsError) throw orderItemsError
+
+      if (orderItems?.length) {
+        const { error: poItemsError } = await supabase
+          .from('purchase_order_items')
+          .insert(
+            orderItems.map(item => ({
+              purchase_order_id: result.data.id,
+              product_id: item.product_id,
+              quantity_ordered: item.quantity_ordered,
+              quantity_received: 0,
+            }))
+          )
+
+        if (poItemsError) throw poItemsError
+      }
+
+      // Send email
+      fetch('/api/send-po-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          purchaseOrderId: result.data.id,
+        }),
+      })
+
+      toast?.show(
+        result.skippedColumns.length
+          ? `Purchase order created. Skipped unsupported fields: ${result.skippedColumns.join(', ')}.`
+          : 'Purchase order created.'
+      )
+    }
+
+    resetForm()
+    await refresh()
+  } catch (error) {
+    toast?.show(error.message, 'error')
+  } finally {
+    setSaving(false)
   }
+}
 
   const remove = async () => {
     setDeleting(true)
@@ -204,7 +248,7 @@ export default function PurchaseOrdersPage() {
             </label>
             <label className="block text-sm font-medium text-gray-700">Status
               <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
-                <option value="pending">Pending</option>
+                <option value="Pending">Pending</option>
                 <option value="partially_delivered">Partially Delivered</option>
                 <option value="delivered">Delivered</option>
               </select>

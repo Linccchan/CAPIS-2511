@@ -58,10 +58,10 @@ export default function SupplierDeliveriesPage() {
                     <td className="py-3 pr-4 font-medium">{item.poNumber}</td>
                     <td className="py-3 pr-4 text-gray-600">{item.supplier}</td>
                     <td className="py-3 pr-4 text-gray-600">{item.productName}</td>
-                    <td className="py-3 pr-4">{item.orderedQuantity}</td>
-                    <td className="py-3 pr-4">{item.deliveredQuantity}</td>
-                    <td className="py-3 pr-4">{item.remainingQuantity}</td>
-                    <td className="py-3"><Badge tone={statusTone(item.deliveryStatus)}>{item.deliveryStatus}</Badge></td>
+                    <td className="py-3 pr-4">{item.quantity_ordered}</td>
+                    <td className="py-3 pr-4">{item.quantity_received}</td>
+                    <td className="py-3 pr-4">{(item.quantity_ordered - item.quantity_received)}</td>
+                    <td className="py-3"><Badge tone={statusTone(item.status)}>{item.status}</Badge></td>
                   </tr>
                 ))}
               </tbody>
