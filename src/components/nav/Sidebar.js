@@ -20,8 +20,9 @@ const NAV = {
       { title: 'Operations', items: [
         { label: 'Dashboard', href: '/warehouse/dashboard' },
         { label: 'Log Delivery', href: '/warehouse/log-delivery' },
-        { label: 'Stock & Locations', href: '/warehouse/stock' },
         { label: 'Staging Tracker', href: '/warehouse/staging' },
+        { label: 'Warehouse Locations', href: '/warehouse/warehouse-locations' },
+        { label: 'Stock', href: '/warehouse/stock' },
       ] },
     ],
   },

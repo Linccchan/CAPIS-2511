@@ -187,7 +187,6 @@ async function handleConfirmReceipt() {
               <th className="table-th">PO #</th>
               <th className="table-th">Order</th>
               <th className="table-th">Supplier</th>
-              <th className="table-th">Delivered</th>
               <th className="table-th">Status</th>
               <th className="table-th">Action</th>
             </tr>
@@ -206,10 +205,6 @@ async function handleConfirmReceipt() {
 
                 <td className="table-td">
                   {po.suppliers?.supplier_name}
-                </td>
-
-                <td className="table-td">
-                  {po.actual_completed_date || '-'}
                 </td>
 
                 <td className="table-td">

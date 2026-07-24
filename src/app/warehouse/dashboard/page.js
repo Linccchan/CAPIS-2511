@@ -53,7 +53,7 @@ export default function WarehouseDashboard() {
   }, [])
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div >
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>Warehouse overview</div>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>

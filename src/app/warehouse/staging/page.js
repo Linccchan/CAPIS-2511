@@ -62,42 +62,56 @@ const [selectedLocations, setSelectedLocations] = useState({})
     )
   }, [purchaseOrders, search])
 
-    async function confirmStaging(poId) {
-      const locationId = selectedLocations[poId]
+async function confirmStaging(poId) {
+  const locationId = selectedLocations[poId]
 
-      if (!locationId) return
+  if (!locationId) return
 
-      // Update purchase order
-      const { error } = await supabase
-        .from('purchase_orders')
-        .update({
-          status: 'Ready for Shipment',
-        })
-        .eq('id', poId)
+  // Update purchase order
+  const { error } = await supabase
+    .from('purchase_orders')
+    .update({
+      status: 'Ready for Shipment',
+    })
+    .eq('id', poId)
 
-      if (error) {
-        console.error(error)
-        return
-      }
+  if (error) {
+    console.error(error)
+    return
+  }
 
-      // Update all purchase order items for this PO
-      const { error: itemsError } = await supabase
-        .from('purchase_order_items')
-        .update({
-          status: 'Ready for Shipment',
-        })
-        .eq('purchase_order_id', poId)
+  // Update all purchase order items
+  const { error: itemsError } = await supabase
+    .from('purchase_order_items')
+    .update({
+      status: 'Ready for Shipment',
+    })
+    .eq('purchase_order_id', poId)
 
-      if (itemsError) {
-        console.error(itemsError)
-        return
-      }
+  if (itemsError) {
+    console.error(itemsError)
+    return
+  }
 
-      // Remove the PO from the current table
-      setPurchaseOrders(prev =>
-        prev.filter(po => po.id !== poId)
-      )
-    }
+  // Assign warehouse location
+  const { error: locationError } = await supabase
+    .from('warehouse_locations')
+    .update({
+      occupied: true,
+      purchase_order_id: poId,
+    })
+    .eq('id', locationId)
+
+  if (locationError) {
+    console.error(locationError)
+    return
+  }
+
+  // Remove the PO from the current table
+  setPurchaseOrders(prev =>
+    prev.filter(po => po.id !== poId)
+  )
+}
 
   return (
     <div style={{ maxWidth: '100%' }}>
