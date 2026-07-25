@@ -71,6 +71,7 @@ export default function AdminDashboard() {
         { title: 'PFI Builder', description: 'Prepare pro forma invoices for submitted quotation requests.', href: '/order-management/customer-orders' },
         { title: 'Purchase Orders', description: 'Monitor supplier purchase orders and overdue delivery status.', href: '/admin/purchase-orders' },
         { title: 'Suppliers', description: 'Review supplier profiles, performance, and active purchase orders.', href: '/admin/suppliers' },
+        { title: 'Suppliers Performance', description: 'Review supplier performance through charts and data.', href: '/admin/suppliers-performance' },
       ],
     },
     {
@@ -84,7 +85,7 @@ export default function AdminDashboard() {
     {
       title: 'Catalog',
       items: [
-        { title: 'Supplier Costs', description: 'Review supplier cost changes and product pricing prompts.', href: '/admin/supplier-costs' },
+        //{ title: 'Supplier Costs', description: 'Review supplier cost changes and product pricing prompts.', href: '/admin/supplier-costs' },
         { title: 'Products', description: 'View and manage registered products.', href: '/admin/products' },
       ],
     },
@@ -120,7 +121,7 @@ export default function AdminDashboard() {
           <h2 className="text-sm font-semibold text-gray-900">Admin Workspaces</h2>
           <Link href="/order-management" className="text-sm font-medium text-gray-900 hover:underline">Open orders</Link>
         </div>
-        <div className="grid gap-5 p-5 xl:grid-cols-3">
+        <div className="grid gap-5 p-5 xl:grid-cols-2">
           {workspaceGroups.map((group) => (
             <div key={group.title} className="space-y-3">
               <div className="text-xs font-semibold uppercase text-gray-500">{group.title}</div>

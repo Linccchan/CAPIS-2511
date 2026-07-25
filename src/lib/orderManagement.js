@@ -413,9 +413,18 @@ export async function importSuppliers(rows) {
 export async function fetchSuppliers() {
   const { data, error } = await supabase
     .from('suppliers')
-    .select(
-      '*, supplier_performance(average_lead_time_days, late_delivery_count, total_purchase_orders, reliability_score), purchase_orders(id, status)'
-    )
+        .select(`
+          *,
+          supplier_performance(
+            id,
+            average_lead_time_days,
+            late_delivery_count,
+            total_purchase_orders,
+            reliability_score,
+            calculated_at
+          ),
+          purchase_orders(id, status)
+        `)
     .order('supplier_name')
 
   if (error) {
