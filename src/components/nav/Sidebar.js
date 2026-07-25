@@ -20,8 +20,14 @@ const NAV = {
       { title: 'Operations', items: [
         { label: 'Dashboard', href: '/warehouse/dashboard' },
         { label: 'Log Delivery', href: '/warehouse/log-delivery' },
-        { label: 'Stock & Locations', href: '/warehouse/stock' },
         { label: 'Staging Tracker', href: '/warehouse/staging' },
+      ] },
+      { title: 'Management', items: [
+        { label: 'Warehouse Locations', href: '/warehouse/warehouse-locations' },
+        { label: 'Stock', href: '/warehouse/stock' },
+      ] },
+      { title: 'Reports', items: [
+        { label: 'Suppliers Performance', href: '/warehouse/suppliers-performance' },
       ] },
     ],
   },
@@ -35,13 +41,14 @@ const NAV = {
         { label: 'PFI Builder', href: '/order-management/customer-orders' },
         { label: 'Purchase Orders', href: '/admin/purchase-orders' },
         { label: 'Suppliers', href: '/admin/suppliers' },
+        { label: 'Suppliers Performance', href: '/admin/suppliers-performance' },
       ] },
       { title: 'Warehouse', items: [
         { label: 'Compliance', href: '/admin/compliance' },
         { label: 'Manage Locations', href: '/admin/locations' },
       ] },
       { title: 'Catalog', items: [
-        { label: 'Supplier Costs', href: '/admin/supplier-costs' },
+        //{ label: 'Supplier Costs', href: '/admin/supplier-costs' },
         { label: 'Products', href: '/admin/products' },
       ] },
       { title: 'Customer', items: [
@@ -60,13 +67,14 @@ const NAV = {
         { label: 'PFI Builder', href: '/order-management/customer-orders' },
         { label: 'Purchase Orders', href: '/admin/purchase-orders' },
         { label: 'Suppliers', href: '/admin/suppliers' },
+        { label: 'Suppliers Performance', href: '/admin/suppliers-performance' },
       ] },
       { title: 'Warehouse', items: [
         { label: 'Compliance', href: '/admin/compliance' },
         { label: 'Manage Locations', href: '/admin/locations' },
       ] },
       { title: 'Catalog', items: [
-        { label: 'Supplier Costs', href: '/admin/supplier-costs' },
+        //{ label: 'Supplier Costs', href: '/admin/supplier-costs' },
         { label: 'Products', href: '/admin/products' },
       ] },
       { title: 'Customer', items: [

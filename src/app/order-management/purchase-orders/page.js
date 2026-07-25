@@ -24,6 +24,42 @@ export default function PurchaseOrdersPage() {
   const [editing, setEditing] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
+  const progressMap = (status) => {
+  switch (status) {
+    case 'Pending':
+    case 'pending':
+      return 10
+
+    case 'Sent':
+    case 'sent':
+      return 25
+
+    case 'Confirmed':
+    case 'confirmed':
+      return 40
+
+    case 'Partially Delivered':
+    case 'partially_delivered':
+      return 50
+
+    case 'Delivered':
+    case 'delivered':
+      return 60
+
+    case 'Staging':
+    case 'staging':
+      return 80
+
+    case 'Ready for Shipment':
+    case 'Ready For Shipment':
+    case 'ready_for_shipment':
+      return 100
+
+    default:
+      return 0
+  }
+}
+
   const refresh = async () => {
     try {
       setData(await fetchOrderManagementData())
@@ -205,7 +241,11 @@ const save = async (event) => {
                       <td className="py-3 pr-4 text-gray-600">{formatDate(po.dateIssued)}</td>
                       <td className="py-3 pr-4 text-gray-600">{formatDate(po.expectedDelivery)}</td>
                       <td className="py-3 pr-4"><Badge tone={statusTone(po.status)}>{po.status}</Badge></td>
-                      <td className="py-3 pr-4"><ProgressBar value={po.progress} /></td>
+
+                      <td className="py-3 pr-4">
+                        <ProgressBar value={progressMap(po.status)} />
+                      </td>
+                                            
                       <td className="py-3">
                         <div className="flex gap-2">
                           <button onClick={() => openEdit(po)} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">Edit</button>

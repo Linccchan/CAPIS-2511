@@ -143,26 +143,36 @@ export default function CustomersPage() {
 
   async function deleteCustomer(id) {
     const confirmed = window.confirm(
-        'Are you sure you want to delete this customer?'
+      'This will permanently delete the customer and all of their orders. Continue?'
     );
 
     if (!confirmed) return;
 
-    const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', id);
+    // Delete all orders for this customer
+    const { error: orderError } = await supabase
+      .from('customer_orders')
+      .delete()
+      .eq('customer_id', id);
 
-    if (error) {
-        alert(error.message);
-        return;
+    if (orderError) {
+      alert(orderError.message);
+      return;
     }
 
-    setCustomers(prev =>
-        prev.filter(customer => customer.id !== id)
-    );
+    // Delete the customer
+    const { error: customerError } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', id);
 
-    alert('Customer deleted successfully!');
+    if (customerError) {
+      alert(customerError.message);
+      return;
+    }
+
+    setCustomers(prev => prev.filter(customer => customer.id !== id));
+
+    alert('Customer and all associated orders deleted successfully!');
   }
 
 
