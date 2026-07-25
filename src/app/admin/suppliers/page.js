@@ -19,6 +19,15 @@ export default function SuppliersPage() {
   const [editingSupplier, setEditingSupplier] = useState(null)
   const [csvRows, setCsvRows] = useState([])
   const [importing, setImporting] = useState(false)
+  const [showPerformanceModal, setShowPerformanceModal] = useState(false)
+  const [selectedPerformance, setSelectedPerformance] = useState(null)
+
+  const [performanceForm, setPerformanceForm] = useState({
+    average_lead_time_days: '',
+    late_delivery_count: 0,
+    total_purchase_orders: 0,
+    reliability_score: ''
+  })
 
   const [form, setForm] = useState({
     supplier_name: '',
@@ -33,9 +42,20 @@ export default function SuppliersPage() {
     let active = true
     async function load() {
       const { data } = await supabase
-        .from('suppliers')
-        .select('*, supplier_performance(average_lead_time_days, late_delivery_count, total_purchase_orders, reliability_score), purchase_orders(id, status)')
-        .order('supplier_name')
+        .from("suppliers")
+        .select(`
+          *,
+          supplier_performance(
+            id,
+            average_lead_time_days,
+            late_delivery_count,
+            total_purchase_orders,
+            reliability_score,
+            calculated_at
+          ),
+          purchase_orders(id, status)
+        `)
+        .order("supplier_name")
       if (active) setSuppliers(data || [])
     }
     load()
@@ -44,6 +64,75 @@ export default function SuppliersPage() {
     }
   }, [])
 
+  function handlePerformance(supplier) {
+    const latestSupplier =
+      suppliers.find(s => s.id === supplier.id) || supplier
+
+    const perf = latestSupplier.supplier_performance?.[0]
+
+    setSelectedSupplier(latestSupplier)
+
+    setPerformanceForm({
+      average_lead_time_days: perf?.average_lead_time_days ?? '',
+      late_delivery_count: perf?.late_delivery_count ?? 0,
+      total_purchase_orders: perf?.total_purchase_orders ?? 0,
+      reliability_score: perf?.reliability_score ?? '',
+    })
+
+    setShowPerformanceModal(true)
+  }
+
+  async function handleSavePerformance() {
+console.log("selectedSupplier:", selectedSupplier)
+
+const existing = selectedSupplier?.supplier_performance?.[0]
+
+console.log("existing:", existing)
+console.log("existing.id:", existing?.id)
+console.log("selectedSupplier.id:", selectedSupplier?.id)
+
+  if (existing) {
+    const { error } = await supabase
+      .from("supplier_performance")
+      .update({
+        average_lead_time_days: Number(performanceForm.average_lead_time_days),
+        late_delivery_count: Number(performanceForm.late_delivery_count),
+        total_purchase_orders: Number(performanceForm.total_purchase_orders),
+        reliability_score: Number(performanceForm.reliability_score),
+        calculated_at: new Date().toISOString()
+      })
+      .eq("id", existing.id)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+  } else {
+    const { error } = await supabase
+      .from("supplier_performance")
+      .insert({
+        supplier_id: selectedSupplier.id,
+        average_lead_time_days: Number(performanceForm.average_lead_time_days),
+        late_delivery_count: Number(performanceForm.late_delivery_count),
+        total_purchase_orders: Number(performanceForm.total_purchase_orders),
+        reliability_score: Number(performanceForm.reliability_score),
+        calculated_at: new Date().toISOString()
+      })
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+  }
+
+  const data = await fetchSuppliers()
+  setSuppliers(data)
+
+  const updatedSupplier = data.find(s => s.id === selectedSupplier.id)
+  setSelectedSupplier(updatedSupplier)
+  
+  setShowPerformanceModal(false)
+}
 
   async function handleSave(e) {
     e.preventDefault()
@@ -226,11 +315,11 @@ export default function SuppliersPage() {
             <tr>
               <th className="table-th">Supplier</th>
               <th className="table-th">Type</th>
-              <th className="table-th" style={{ textAlign: 'right' }}>Avg lead days</th>
-              <th className="table-th" style={{ textAlign: 'right' }}>On-time rate</th>
-              <th className="table-th" style={{ textAlign: 'right' }}>Active POs</th>
+              <th className="table-th" style={{ textAlign: 'left' }}>Avg lead days</th>
+              <th className="table-th" style={{ textAlign: 'left' }}>On-time rate</th>
+              <th className="table-th" style={{ textAlign: 'left' }}>Active POs</th>
               <th className="table-th">Reliability</th>
-              <th className="table-th"></th>
+              <th className="table-th" style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -248,14 +337,21 @@ export default function SuppliersPage() {
                     <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{supplier.email}</div>
                   </td>
                   <td className="table-td" style={{ textTransform: 'capitalize' }}>{supplier.supplier_type || '-'}</td>
-                  <td className="table-td" style={{ textAlign: 'right' }}>{perf?.average_lead_time_days ? `${Math.round(perf.average_lead_time_days)} days` : '-'}</td>
-                  <td className="table-td" style={{ textAlign: 'right' }}>{onTimeRate != null ? `${onTimeRate}%` : '-'}</td>
-                  <td className="table-td" style={{ textAlign: 'right' }}>{activePOs}</td>
+                  <td className="table-td" style={{ textAlign: 'left' }}>{perf?.average_lead_time_days ? `${Math.round(perf.average_lead_time_days)} days` : '-'}</td>
+                  <td className="table-td" style={{ textAlign: 'left' }}>{onTimeRate != null ? `${onTimeRate}%` : '-'}</td>
+                  <td className="table-td" style={{ textAlign: 'left' }}>{activePOs}</td>
                   <td className="table-td"><span className={`badge ${rel.cls}`}>{rel.label}</span></td>
                   <td className="table-td">
                     <div className="flex justify-end gap-2">
                       <button className="rounded border px-3 py-1 text-sm hover:bg-gray-100" onClick={() => handleView(supplier)}>
                         View
+                      </button>
+
+                      <button
+                        className="rounded border border-green-200 px-3 py-1 text-sm text-green-700 hover:bg-green-50"
+                        onClick={() => handlePerformance(supplier)}
+                      >
+                        Performance
                       </button>
 
                       <button
@@ -684,6 +780,140 @@ export default function SuppliersPage() {
             </div>
           </div>
         )}
+
+{showPerformanceModal && selectedSupplier && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-xl font-semibold">
+          Update Supplier Performance
+        </h2>
+
+        <button
+          onClick={() => setShowPerformanceModal(false)}
+          className="text-xl text-gray-500 hover:text-black"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="mb-6">
+        <p className="text-sm text-gray-500">Supplier</p>
+        <p className="font-semibold">{selectedSupplier.supplier_name}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Average Lead Time (Days)
+          </label>
+          <input
+            type="number"
+            className="w-full rounded-md border border-gray-300 px-3 py-2"
+            value={performanceForm.average_lead_time_days}
+            onChange={(e) =>
+              setPerformanceForm({
+                ...performanceForm,
+                average_lead_time_days: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Late Deliveries
+          </label>
+          <input
+            type="number"
+            className="w-full rounded-md border border-gray-300 px-3 py-2"
+            value={performanceForm.late_delivery_count}
+            onChange={(e) =>
+              setPerformanceForm({
+                ...performanceForm,
+                late_delivery_count: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Total Purchase Orders
+          </label>
+          <input
+            type="number"
+            className="w-full rounded-md border border-gray-300 px-3 py-2"
+            value={performanceForm.total_purchase_orders}
+            onChange={(e) =>
+              setPerformanceForm({
+                ...performanceForm,
+                total_purchase_orders: e.target.value,
+              })
+            }
+          />
+        </div>
+
+
+
+<div>
+  <div className="mb-2 flex items-center justify-between">
+    <label className="text-sm font-medium">
+      Reliability Score
+    </label>
+
+    <span className="rounded bg-gray-100 px-2 py-1 text-sm font-semibold">
+      {Math.round((performanceForm.reliability_score || 0) * 100)}%
+    </span>
+  </div>
+
+  <input
+    type="range"
+    min="0"
+    max="1"
+    step="0.01"
+    value={performanceForm.reliability_score}
+    onChange={(e) =>
+      setPerformanceForm({
+        ...performanceForm,
+        reliability_score: parseFloat(e.target.value),
+      })
+    }
+    className="h-2 w-full cursor-pointer accent-black"
+  />
+
+  <div className="mt-1 flex justify-between text-xs text-gray-500">
+    <span>0%</span>
+    <span>50%</span>
+    <span>100%</span>
+  </div>
+</div>
+
+
+
+      </div>
+
+      <div className="mt-8 flex justify-end gap-3">
+        <button
+          onClick={() => setShowPerformanceModal(false)}
+          className="rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-100"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSavePerformance}
+          className="rounded-md bg-black px-4 py-2 text-white hover:bg-gray-800"
+        >
+          Save Performance
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
 
       </div>
     </div>

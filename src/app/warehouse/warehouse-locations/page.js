@@ -132,63 +132,54 @@ export default function WarehouseLocationsPage() {
               transition: '.2s',
             }}
           >
-            <div
-              style={{
-                fontSize: 22,
-                fontWeight: 700,
-                marginBottom: 6,
-              }}
-            >
-              {location.location_code}
-            </div>
+<div
+  style={{
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  }}
+>
+  <div
+    style={{
+      fontSize: 22,
+      fontWeight: 700,
+    }}
+  >
+    {location.location_code}
+  </div>
+
+  <span
+    style={{
+      padding: '4px 10px',
+      borderRadius: 999,
+      fontSize: 11,
+      fontWeight: 600,
+      background: location.occupied ? '#dc2626' : '#16a34a',
+      color: '#fff',
+      whiteSpace: 'nowrap',
+    }}
+  >
+    {location.occupied ? 'Occupied' : 'Available'}
+  </span>
+</div>
 
             <div
               style={{
                 fontSize: 13,
                 opacity: .85,
                 minHeight: 42,
-                marginBottom: 18,
+                marginBottom: 0,
               }}
             >
               {location.description || 'No description'}
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 12,
-                  color: location.occupied ? '#d1d5db' : '#6b7280',
-                }}
-              >
-                Status
-              </span>
-
-              <span
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  background: location.occupied
-                    ? '#dc2626'
-                    : '#16a34a',
-                  color: '#fff',
-                }}
-              >
-                {location.occupied ? 'Occupied' : 'Available'}
-              </span>
-            </div>
 
             {location.purchase_order_id && (
             <div
                 style={{
-                marginTop: 16,
+                marginTop: 0,
                 padding: 10,
                 borderRadius: 8,
                 background: location.occupied
