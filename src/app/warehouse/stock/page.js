@@ -50,7 +50,7 @@ export default function StockPage() {
   }
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>Stock & warehouse locations</div>

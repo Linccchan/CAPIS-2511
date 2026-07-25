@@ -85,6 +85,13 @@ export default function AdminDashboard() {
       title: 'Catalog',
       items: [
         { title: 'Supplier Costs', description: 'Review supplier cost changes and product pricing prompts.', href: '/admin/supplier-costs' },
+        { title: 'Products', description: 'View and manage registered products.', href: '/admin/products' },
+      ],
+    },
+    {
+      title: 'Customer',
+      items: [
+        { title: 'Customers', description: 'View and manage registered customers.', href: '/admin/customers' },
       ],
     },
   ]

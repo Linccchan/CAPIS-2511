@@ -291,7 +291,37 @@ export function buildOrderManagementData(raw) {
 }
 
 export async function createRecord(table, payload) {
-  return writeRecord(payload, (nextPayload) => supabase.from(table).insert(nextPayload))
+  let nextPayload = { ...payload }
+
+  if (table === 'purchase_orders') {
+    const year = new Date().getFullYear()
+
+    const { data: latestPO, error } = await supabase
+      .from('purchase_orders')
+      .select('po_number')
+      .ilike('po_number', `PO-${year}-%`)
+      .order('po_number', { ascending: false })
+      .limit(1)
+
+    if (error) throw new Error(error.message)
+
+    let nextNumber = 901
+
+    if (latestPO && latestPO.length > 0) {
+      const current = parseInt(latestPO[0].po_number.split('-')[2], 10)
+      nextNumber = current + 1
+    }
+
+    nextPayload.po_number = `PO-${year}-${nextNumber}`
+  }
+
+  return writeRecord(nextPayload, (payload) =>
+    supabase
+      .from(table)
+      .insert(payload)
+      .select()
+      .single()
+  )
 }
 
 export async function updateRecord(table, id, payload) {
@@ -299,9 +329,35 @@ export async function updateRecord(table, id, payload) {
   return writeRecord(payload, (nextPayload) => supabase.from(table).update(nextPayload).eq(target.column, target.value))
 }
 
+
 export async function deleteRecord(table, id) {
+  if (table === 'suppliers') {
+    const { count, error: countError } = await supabase
+      .from('purchase_orders')
+      .select('*', {
+        count: 'exact',
+        head: true,
+      })
+      .eq('supplier_id', id)
+
+    if (countError) {
+      throw new Error(countError.message)
+    }
+
+    if (count > 0) {
+      throw new Error(
+        `This supplier cannot be deleted because it has ${count} purchase order${count > 1 ? 's' : ''} associated with it.`
+      )
+    }
+  }
+
   const target = mutationTarget(table, id)
-  const { error } = await supabase.from(table).delete().eq(target.column, target.value)
+
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq(target.column, target.value)
+
   if (error) throw new Error(error.message)
 }
 
@@ -325,8 +381,14 @@ async function writeRecord(payload, write) {
   const skippedColumns = []
 
   while (Object.keys(nextPayload).length > 0) {
-    const { error } = await write(nextPayload)
-    if (!error) return { skippedColumns }
+    const { data, error } = await write(nextPayload)
+
+    if (!error) {
+      return {
+        data,
+        skippedColumns,
+      }
+    }
 
     const missingColumn = missingColumnFrom(error.message)
     if (!missingColumn || !(missingColumn in nextPayload)) {
@@ -338,4 +400,27 @@ async function writeRecord(payload, write) {
   }
 
   throw new Error('No valid columns were available to save this record.')
+}
+
+export async function importSuppliers(rows) {
+  const { error } = await supabase
+    .from("suppliers")
+    .insert(rows)
+
+  if (error) throw new Error(error.message)
+}
+
+export async function fetchSuppliers() {
+  const { data, error } = await supabase
+    .from('suppliers')
+    .select(
+      '*, supplier_performance(average_lead_time_days, late_delivery_count, total_purchase_orders, reliability_score), purchase_orders(id, status)'
+    )
+    .order('supplier_name')
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return data || []
 }

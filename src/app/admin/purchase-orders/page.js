@@ -3,10 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { useRouter } from 'next/navigation'
 
 export default function PurchaseOrdersPage() {
+  const router = useRouter()
+
   const [pos, setPos] = useState([])
   const [tab, setTab] = useState('All')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     let active = true
@@ -31,25 +35,44 @@ export default function PurchaseOrdersPage() {
       All: pos,
       Overdue: overdue,
       Sent: pos.filter((po) => po.status === 'sent' && !(po.expected_delivery_date && po.expected_delivery_date < today)),
-      'Partially delivered': pos.filter((po) => po.status === 'partially_delivered'),
+      Pending: pos.filter((po) => po.status === 'Pending'),
+      'Partially Delivered': pos.filter((po) => po.status === 'partially_delivered'),
       Delivered: pos.filter((po) => po.status === 'delivered'),
     }
   }, [pos, today])
 
-  const displayed = tabMap[tab] || pos
+  const displayed = (tabMap[tab] || []).filter((po) => {
+    const q = search.toLowerCase().trim()
+
+    if (!q) return true
+
+    return (
+      po.po_number?.toLowerCase().includes(q) ||
+      po.customer_orders?.order_number?.toLowerCase().includes(q) ||
+      po.suppliers?.supplier_name?.toLowerCase().includes(q) ||
+      po.status?.toLowerCase().includes(q)
+    )
+  })
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div style={{ maxWidth: '100%'}}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>Purchase orders</div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <input type="text" className="input" placeholder="Search POs..." style={{ width: 180 }} />
-          <button className="btn btn-primary">+ Create PO</button>
+          <input
+            type="text"
+            className="input"
+            placeholder="Search PO #, supplier, order..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 250 }}
+          />
+          <button className="btn btn-primary" onClick={() => router.push('/order-management/purchase-orders')}>+ Create PO</button>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
-        {['All', 'Overdue', 'Sent', 'Partially delivered', 'Delivered'].map((item) => (
+        {['All', 'Pending', 'Partially Delivered', 'Delivered', 'Sent', 'Overdue'].map((item) => (
           <button
             key={item}
             type="button"

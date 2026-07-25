@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { FiEye, FiEyeOff } from 'react-icons/fi'
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -91,13 +93,24 @@ export default function LoginPage() {
           <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
             Password
           </label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400"
-          />
+
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 pr-10 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400"
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+            >
+              {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+            </button>
+          </div>
         </div>
 
         {/* Remember Me and Forgot Password */}
