@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase/admin'
+import { createSupabaseAdmin } from '@/lib/supabase/admin'
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -7,6 +7,7 @@ function sleep(ms) {
 
 export async function POST(req) {
   try {
+    const supabaseAdmin = createSupabaseAdmin()
     const body = await req.json()
 
     const {

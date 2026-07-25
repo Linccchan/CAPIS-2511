@@ -105,7 +105,7 @@ export default function CustomerDashboard() {
             <h1 className="text-xl font-bold text-gray-900">
               Good morning, {customer?.company_name || 'Customer'}
             </h1>
-            <p className="text-sm text-gray-500">Here's the status of your current orders.</p>
+            <p className="text-sm text-gray-500">Here&apos;s the status of your current orders.</p>
           </div>
           <button
             onClick={() => router.push('/customer/quotation/new')}
