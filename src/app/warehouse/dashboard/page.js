@@ -1,152 +1,450 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { StatusBadge } from '@/components/ui/StatusBadge'
 
 export default function WarehouseDashboard() {
-  const [expectedDeliveries, setExpectedDeliveries] = useState([])
-  const [pendingConfirmations, setPendingConfirmations] = useState([])
-  const [stickerTasks, setStickerTasks] = useState([])
-  const [warehouseSkus, setWarehouseSkus] = useState(0)
-  const [stagedSkus, setStagedSkus] = useState(0)
+  const [deliveredPOs, setDeliveredPOs] = useState(0)
+  const [stagingPOs, setStagingPOs] = useState(0)
+  const [readyForShipmentPOs, setReadyForShipmentPOs] = useState(0)
+
+  const [products, setProducts] = useState([])
+  const [warehouseLocations, setWarehouseLocations] = useState([])
 
   useEffect(() => {
     let active = true
+
     async function load() {
-      const today = new Date().toISOString().split('T')[0]
       const [
-        { data: expected },
-        { data: pending },
-        { data: tasks },
-        { count: stockCount },
-        { count: stagedCount },
+        { count: deliveredCount },
+        { count: stagingCount },
+        { count: readyCount },
+        { data: productsData },
+        { data: warehouseLocationsData },
       ] = await Promise.all([
         supabase
-          .from('supplier_deliveries')
-          .select('*, suppliers(supplier_name), purchase_orders(id, po_number, customer_orders(order_number))')
-          .eq('delivery_date', today)
-          .neq('delivery_status', 'received'),
+          .from('purchase_orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'delivered'),
+
         supabase
-          .from('supplier_deliveries')
-          .select('*, suppliers(supplier_name), purchase_orders(id, po_number, customer_orders(order_number))')
-          .eq('delivery_status', 'pending_confirmation'),
+          .from('purchase_orders')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['staging', 'Staging']),
+
         supabase
-          .from('labeling_tasks')
-          .select('*, products(product_name), customer_orders(order_number)')
-          .in('status', ['pending', 'in_progress']),
-        supabase.from('inventory_batches').select('*', { count: 'exact', head: true }).gt('quantity_available', 0),
-        supabase.from('staging_tasks').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+          .from('purchase_orders')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['ready_for_shipment', 'Ready for Shipment', 'Ready For Shipment']),
+
+        supabase
+          .from('products')
+          .select('id, product_name, sku, brand, category')
+          .order('product_name'),
+
+        supabase
+          .from('warehouse_locations')
+          .select('id, location_code, description, occupied')
+          .order('location_code'),
       ])
+
       if (!active) return
-      setExpectedDeliveries(expected || [])
-      setPendingConfirmations(pending || [])
-      setStickerTasks(tasks || [])
-      setWarehouseSkus(stockCount || 0)
-      setStagedSkus(stagedCount || 0)
+
+      setDeliveredPOs(deliveredCount || 0)
+      setStagingPOs(stagingCount || 0)
+      setReadyForShipmentPOs(readyCount || 0)
+
+      setProducts(productsData || [])
+      setWarehouseLocations(warehouseLocationsData || [])
     }
+
     load()
+
     return () => {
       active = false
     }
   }, [])
 
   return (
-    <div style={{ maxWidth: 900 }}>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>Warehouse overview</div>
-        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-          {new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} - {expectedDeliveries.length} deliveries expected today
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 20,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            letterSpacing: '-0.5px',
+            color: 'var(--text-primary)',
+          }}
+        >
+          Warehouse Overview
+        </div>
+
+        <div
+          style={{
+            fontSize: 16,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          {new Date().toLocaleDateString('en-PH', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-        <div className="stat-card"><div className="stat-val">{warehouseSkus}</div><div className="stat-lbl">SKUs in warehouse</div><div className="stat-sub">Across active orders</div></div>
-        <div className="stat-card"><div className="stat-val">{expectedDeliveries.length}</div><div className="stat-lbl">Expected deliveries today</div><div className="stat-sub">Pending receipt</div></div>
-        <div className="stat-card"><div className="stat-val">{pendingConfirmations.length}</div><div className="stat-lbl">Pending confirmation</div><div className="stat-sub">Supplier dispatched, needs WH sign-off</div></div>
-        <div className="stat-card"><div className="stat-val">{stagedSkus}</div><div className="stat-lbl">SKUs staged for loading</div><div className="stat-sub">Ready for container</div></div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div className="card">
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-            Expected deliveries today
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th className="table-th">PO #</th>
-                <th className="table-th">Supplier</th>
-                <th className="table-th">For order</th>
-                <th className="table-th">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {expectedDeliveries.map((delivery) => {
-                const po = delivery.purchase_orders
-                return (
-                  <tr key={delivery.id}>
-                    <td className="table-td"><span className="td-primary">{po?.po_number}</span></td>
-                    <td className="table-td">{delivery.suppliers?.supplier_name}</td>
-                    <td className="table-td">{po?.customer_orders?.order_number}</td>
-                    <td className="table-td"><Link href={`/warehouse/log-delivery/${po?.id}`} className="btn btn-sm btn-primary">Log delivery</Link></td>
-                  </tr>
-                )
-              })}
-              {expectedDeliveries.length === 0 && <tr><td colSpan={4} className="table-td" style={{ textAlign: 'center', padding: 24 }}>No deliveries scheduled today</td></tr>}
-            </tbody>
-          </table>
+      {/* Operational Summary */}
+      <div style={{ marginBottom: 24 }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            marginBottom: 10,
+          }}
+        >
+          Operational Summary
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div className="card">
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-              Sticker tasks
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 12,
+          }}
+        >
+          <div className="stat-card">
+            <div className="stat-val">{deliveredPOs}</div>
+            <div className="stat-lbl">Delivered Orders</div>
+            <div className="stat-sub">
+              Purchase orders successfully received
             </div>
-            {stickerTasks.map((task) => {
-              const pct = task.required_quantity > 0 ? Math.round((task.completed_quantity / task.required_quantity) * 100) : 0
-              return (
-                <div key={task.id} style={{ padding: '10px 14px', borderBottom: '1px solid var(--bg)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>Apply stickers - {task.products?.product_name}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>{task.customer_orders?.order_number} - {task.required_quantity} units</div>
-                    </div>
-                    <StatusBadge status={task.status} />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ flex: 1, height: 4, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', background: 'var(--accent)', borderRadius: 99, width: `${pct}%` }} />
-                    </div>
-                    <span style={{ fontSize: 10, color: 'var(--text-secondary)', minWidth: 60 }}>{task.completed_quantity}/{task.required_quantity}</span>
-                  </div>
-                </div>
-              )
-            })}
-            {stickerTasks.length === 0 && <div style={{ padding: '16px 14px', fontSize: 11, color: 'var(--text-tertiary)' }}>No sticker tasks pending</div>}
           </div>
 
-          <div className="card">
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-              Pending confirmations
+          <div className="stat-card">
+            <div className="stat-val">{stagingPOs}</div>
+            <div className="stat-lbl">Staging Orders</div>
+            <div className="stat-sub">
+              Awaiting container loading
             </div>
-            {pendingConfirmations.map((delivery) => {
-              const po = delivery.purchase_orders
-              return (
-                <div key={delivery.id} style={{ padding: '10px 14px', borderBottom: '1px solid var(--bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{po?.po_number} - {delivery.suppliers?.supplier_name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>Supplier logged dispatch {delivery.delivery_date}</div>
-                  </div>
-                  <Link href={`/warehouse/log-delivery/${po?.id}`} className="btn btn-sm btn-primary">Confirm now</Link>
-                </div>
-              )
-            })}
-            {pendingConfirmations.length === 0 && <div style={{ padding: '14px', fontSize: 11, color: 'var(--text-tertiary)' }}>No pending confirmations</div>}
           </div>
+
+          <div className="stat-card">
+            <div className="stat-val">{readyForShipmentPOs}</div>
+            <div className="stat-lbl">Ready for Shipment</div>
+            <div className="stat-sub">
+              Ready to be loaded for export
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+      {/* Warehouse Resources */}
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            marginBottom: 10,
+          }}
+        >
+          Warehouse Resources
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 12,
+          }}
+        >
+<div className="stat-card">
+  <div className="stat-val">{warehouseLocations.length}</div>
+  <div className="stat-lbl">Warehouse Locations</div>
+
+  <div
+    style={{
+      marginTop: 16,
+      border: '1px solid var(--border)',
+      borderRadius: 8,
+      overflow: 'hidden',
+    }}
+  >
+    <table
+      style={{
+        width: '100%',
+        borderCollapse: 'collapse',
+      }}
+    >
+      <thead>
+        <tr>
+          <th
+            style={{
+              textAlign: 'left',
+              padding: '10px 12px',
+              fontSize: 12,
+              fontWeight: '700',
+              color: 'gray',
+              textTransform: 'uppercase',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            Location Code
+          </th>
+
+          <th
+            style={{
+              textAlign: 'left',
+              padding: '10px 12px',
+              fontSize: 12,
+              fontWeight: '700',
+              color: 'gray',
+              textTransform: 'uppercase',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            Description
+          </th>
+
+                    <th
+            style={{
+              textAlign: 'left',
+              padding: '10px 12px',
+              fontSize: 12,
+              fontWeight: '700',
+              color: 'gray',
+              textTransform: 'uppercase',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            Occupied
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {warehouseLocations.slice(0, 5).map((location) => (
+          <tr key={location.id}>
+            <td
+              style={{
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--border)',
+                fontSize: 13,
+                fontWeight: 'bold',
+                color: 'var(--text-primary)',
+              }}
+            >
+              {location.location_code}
+            </td>
+
+            <td
+              style={{
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--border)',
+                fontSize: 13,
+                color: 'var(--text-primary)',
+              }}
+            >
+              {location.description}
+            </td>
+
+            <td
+              style={{
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--border)',
+                fontSize: 13,
+                color: 'var(--text-primary)',
+              }}
+            >
+              {location.occupied == true ? 'Occupied' : 'Vacant'}
+            </td>
+          </tr>
+        ))}
+
+        {warehouseLocations.length > 5 && (
+          <tr>
+            <td
+              style={{
+                padding: '10px 12px',
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              +{warehouseLocations.length - 5} more locations
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div className="stat-card">
+  <div className="stat-val">{products.length}</div>
+  <div className="stat-lbl">Products</div>
+
+  <div
+    style={{
+      marginTop: 16,
+      border: '1px solid var(--border)',
+      borderRadius: 8,
+      overflow: 'hidden',
+    }}
+  >
+    <table
+      style={{
+        width: '100%',
+        borderCollapse: 'collapse',
+      }}
+    >
+      <thead>
+        <tr>
+          <th
+            style={{
+              textAlign: 'left',
+              padding: '10px 12px',
+              fontSize: 12,
+              fontWeight: '700',
+              color: 'gray',
+              textTransform: 'uppercase',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            Product Name
+          </th>
+
+          <th
+            style={{
+              textAlign: 'left',
+              padding: '10px 12px',
+              fontSize: 12,
+              fontWeight: '700',
+              color: 'gray',
+              textTransform: 'uppercase',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            Brand
+          </th>
+
+          <th
+            style={{
+              textAlign: 'left',
+              padding: '10px 12px',
+              fontSize: 12,
+              fontWeight: '700',
+              color: 'gray',
+              textTransform: 'uppercase',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            SKU
+          </th>
+
+          <th
+            style={{
+              textAlign: 'left',
+              padding: '10px 12px',
+              fontSize: 12,
+              fontWeight: '700',
+              color: 'gray',
+              textTransform: 'uppercase',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            Category
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {products.slice(0, 5).map((product) => (
+          <tr key={product.id}>
+            <td
+              style={{
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--border)',
+                fontSize: 13,
+                fontWeight: 'bold',
+                color: 'var(--text-primary)',
+              }}
+            >
+              {product.product_name}
+            </td>
+
+            <td
+              style={{
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--border)',
+                fontSize: 13,
+                color: 'var(--text-primary)',
+              }}
+            >
+              {product.brand}
+            </td>
+
+            <td
+              style={{
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--border)',
+                fontSize: 13,
+                color: 'var(--text-primary)',
+              }}
+            >
+              {product.sku}
+            </td>
+
+            <td
+              style={{
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--border)',
+                fontSize: 13,
+                color: 'var(--text-primary)',
+              }}
+            >
+              {product.category}
+            </td>
+          </tr>
+        ))}
+
+        {products.length > 5 && (
+          <tr>
+            <td
+              style={{
+                padding: '10px 12px',
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              +{products.length - 5} more products
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
         </div>
       </div>
     </div>
+
+
+
+
   )
 }
