@@ -96,6 +96,12 @@ RLS is **enabled on all 21 tables**. Policy coverage as of the snapshot:
   the private `payment-proofs` storage bucket (customers upload/read under
   their own user-id folder; admin/sales/management read all).
 
+> **Prepared, not yet applied:** migration `008` adds SELECT-only policies for
+> authenticated customers to read their own `payments`, `prediction_records`,
+> `labeling_tasks`, `staging_tasks`, and `supplier_deliveries` through the
+> existing customer-order ownership chain. It supports the read-only customer
+> chatbot and adds no write access.
+
 > **Prepared, not yet applied:** migration `005` (supplier role + portal RLS)
 > and migration `007` (staff-module RLS: billings insert/update for
 > admin/sales; labeling/staging/warehouse_locations policies; warehouse
