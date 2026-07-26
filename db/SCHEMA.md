@@ -91,7 +91,7 @@ RLS is **enabled on all 21 tables**. Policy coverage as of the snapshot:
 - **RLS on but NO policies (currently deny-all to app users):**
   `supplier_performance` (read via migration 005), `prediction_records`,
   `activity_logs`.
-- `payments` (migration 008): customers insert/read own via
+- `payments` (migration 010): customers insert/read own via
   billing→order→customer; admin/sales verify (update). Proof files live in
   the private `payment-proofs` storage bucket (customers upload/read under
   their own user-id folder; admin/sales/management read all).

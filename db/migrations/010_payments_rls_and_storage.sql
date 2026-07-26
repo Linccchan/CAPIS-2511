@@ -1,4 +1,5 @@
--- Migration 008 — Payments RLS + payment-proof storage
+-- Migration 010 — Payments RLS + payment-proof storage
+--   (was 008; renumbered to avoid collision with the chatbot's 008)
 -- Run in the Supabase SQL editor. Idempotent.
 --
 -- payments had RLS enabled with NO policies (deny-all). Customers can now
