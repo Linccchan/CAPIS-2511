@@ -44,58 +44,20 @@ export function ToastProvider({ children }) {
 export const useToast = () => useContext(ToastContext)
 
 export function OrderShell({ children, title, description }) {
-  const pathname = usePathname()
-  const navItems = [
-    ['Dashboard', '/order-management'],
-    ['Customer Orders', '/order-management/customer-orders'],
-    ['Purchase Orders', '/order-management/purchase-orders'],
-    ['Supplier Deliveries', '/order-management/supplier-deliveries'],
-  ]
-
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900">
+          {title}
+        </h1>
 
-      {/* Sidebar — matches the customer module shell */}
-      <div className="w-56 bg-white border-r border-gray-200 flex flex-col p-4 fixed h-full">
-        <div className="flex items-center gap-2 mb-8">
-          <Image src="/dmc-logo.png" alt="DMC" width={36} height={36} />
-          <span className="font-semibold text-sm">DMC Export</span>
-        </div>
-        <p className="text-xs text-gray-400 uppercase mb-2">Order Management</p>
-        <nav className="flex flex-col gap-1">
-          {navItems.map(([label, href]) => {
-            const active = pathname === href || (href !== '/order-management' && pathname.startsWith(href))
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`text-left text-sm px-3 py-2 rounded ${active ? 'font-semibold text-black bg-gray-50' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                • {label}
-              </Link>
-            )
-          })}
-        </nav>
-        <div className="mt-auto">
-          <p className="text-xs text-gray-400 uppercase mb-2">Admin</p>
-          <Link
-            href="/admin/dashboard"
-            className="block text-left text-sm px-3 py-2 rounded text-gray-600 hover:bg-gray-100"
-          >
-            • Admin Dashboard
-          </Link>
-        </div>
+        <p className="text-sm text-gray-500">
+          {description}
+        </p>
       </div>
 
-      {/* Main Content */}
-      <div className="ml-56 flex-1 p-8">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-          <p className="text-sm text-gray-500">{description}</p>
-        </div>
-        {children}
-      </div>
-    </div>
+      {children}
+    </>
   )
 }
 

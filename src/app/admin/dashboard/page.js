@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { fetchOrderManagementData } from '@/lib/orderManagement'
 
 export default function AdminDashboard() {
   const [metrics, setMetrics] = useState([
@@ -13,6 +14,7 @@ export default function AdminDashboard() {
   ])
   const [recentOrders, setRecentOrders] = useState([])
   const [recentPurchaseOrders, setRecentPurchaseOrders] = useState([])
+  const [supplierDeliveries, setSupplierDeliveries] = useState([])
 
   useEffect(() => {
     let active = true
@@ -47,6 +49,8 @@ export default function AdminDashboard() {
           .order('created_at', { ascending: false })
           .limit(5),
       ])
+      const orderData = await fetchOrderManagementData()
+      
       if (!active) return
       setMetrics([
         { label: 'Active Orders', value: activeOrders, href: '/order-management/customer-orders' },
@@ -56,6 +60,9 @@ export default function AdminDashboard() {
       ])
       setRecentOrders(recentOrdersResult.data || [])
       setRecentPurchaseOrders(recentPurchaseOrdersResult.data || [])
+      setSupplierDeliveries(
+        (orderData.supplierDeliveries || []).slice(0, 8)
+      )
     }
     load()
     return () => {
@@ -101,10 +108,29 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase text-gray-500">Export Consolidation System</p>
-          <h1 className="mt-1 text-xl font-semibold text-gray-900">Admin Dashboard</h1>
+          <p className="text-xs font-semibold uppercase text-gray-500">
+            Export Consolidation System
+          </p>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">
+            Admin Dashboard
+          </h1>
         </div>
-        <Link href="/order-management" className="btn btn-primary">Open Order Management</Link>
+
+        <div className="text-right">
+          <p className="text-md font-medium text-gray-900">
+            <span className="text-gray-500">
+              {new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </span>
+
+            <span className="mx-2 text-gray-400">|</span>
+
+            {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
+          </p>
+        </div>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -207,6 +233,67 @@ export default function AdminDashboard() {
           </div>
         </section>
       </div>
+
+
+      <section className="card">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <h2 className="text-sm font-semibold text-gray-900">Supplier Delivery Progress</h2>
+          <Link href="/order-management/supplier-deliveries" className="text-sm font-medium text-gray-900 hover:underline">See all</Link>
+        </div>
+        <div className="overflow-x-auto px-2">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="table-th">Purchase Order</th>
+                <th className="table-th">Supplier</th>
+                <th className="table-th">Product</th>
+                <th className="table-th">Ordered</th>
+                <th className="table-th">Delivered</th>
+                <th className="table-th">Status</th>
+              </tr>
+            </thead>
+              <tbody>
+                {supplierDeliveries.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                      No supplier delivery records.
+                    </td>
+                  </tr>
+                ) : (
+                  supplierDeliveries.map((item) => (
+                    <tr key={`${item.purchaseOrderId}-${item.id}`}>
+                      <td className="table-td">
+                        {item.poNumber}
+                      </td>
+
+                      <td className="table-td">
+                        {item.supplier}
+                      </td>
+
+                      <td className="table-td">
+                        {item.productName}
+                      </td>
+
+                      <td className="table-td">
+                        {item.quantity_ordered}
+                      </td>
+
+                      <td className="table-td">
+                        {item.quantity_received}
+                      </td>
+
+                      <td className="py-3">
+                        <span className="rounded bg-gray-100 px-2 py-1 text-xs">
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   )
 }
