@@ -129,6 +129,12 @@ const NAV = {
   management: {
     sections: [
       {
+        title: 'Analytics',
+        items: [
+          { label: 'Executive Dashboard', href: '/management/analytics' },
+        ],
+      },
+      {
         title: 'Dashboard',
         items: [
           { label: 'Overview', href: '/admin/dashboard' },
