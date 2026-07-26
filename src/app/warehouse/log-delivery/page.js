@@ -15,6 +15,8 @@ export default function LogDeliveryPage() {
   const [showReceiveModal, setShowReceiveModal] = useState(false)
   const [items, setItems] = useState([])
   const [loadingItems, setLoadingItems] = useState(false)
+  const [showProgressModal, setShowProgressModal] = useState(false)
+  const [progressItems, setProgressItems] = useState([])
 
   useEffect(() => {
     let active = true
@@ -142,6 +144,96 @@ async function handleConfirmReceipt() {
     setLoadingItems(false)
   }
 
+  async function openProgressModal(po) {
+  setSelectedPO(po)
+  setShowProgressModal(true)
+
+  const { data, error } = await supabase
+    .from('purchase_order_items')
+    .select(`
+      id,
+      quantity_ordered,
+      quantity_received,
+      sticker_progress,
+      products(
+        product_name,
+        sku,
+        unit
+      )
+    `)
+    .eq('purchase_order_id', po.id)
+
+  if (error) {
+    console.error(error)
+    return
+  }
+
+  setProgressItems(data ?? [])
+}
+
+const handleSaveProgress = async () => {
+  try {
+    // Update every item
+    for (const item of progressItems) {
+      const { error } = await supabase
+        .from('purchase_order_items')
+        .update({
+          sticker_progress: item.sticker_progress,
+        })
+        .eq('id', item.id)
+
+      if (error) throw error
+    }
+
+    // Check if every item is complete
+    const allCompleted = progressItems.every(
+      item =>
+        (item.sticker_progress ?? 0) >= item.quantity_received
+    )
+
+    if (allCompleted) {
+      await supabase
+        .from('purchase_order_items')
+        .update({
+          status: 'Staging',
+        })
+        .eq('purchase_order_id', selectedPO.id)
+
+      await supabase
+        .from('purchase_orders')
+        .update({
+          status: 'Staging',
+        })
+        .eq('id', selectedPO.id)
+    }
+
+    // Refresh the table
+    const { data } = await supabase
+      .from('purchase_orders')
+      .select(`
+        *,
+        suppliers(supplier_name),
+        customer_orders(order_number),
+        purchase_order_items(
+          id,
+          sticker_progress,
+          quantity_ordered
+        )
+      `)
+      .in('status', ['delivered', 'Pending Sticker / Label'])
+
+    setPurchaseOrders(data ?? [])
+
+    alert('Sticker progress saved.')
+
+    setShowProgressModal(false)
+
+  } catch (err) {
+    console.error(err)
+    alert(err.message)
+  }
+}
+
   return (
     <div style={{ maxWidth: '100%' }}>
       <div
@@ -237,20 +329,27 @@ async function handleConfirmReceipt() {
                 <td className="table-td">
                   <div className="flex gap-2">
                     <button
-                      className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
                       onClick={() => {
                         setSelectedPO(po)
                         setShowModal(true)
                       }}
+                      className="rounded border border-gray-300 px-3 py-2 text-xs"
                     >
                       View
                     </button>
 
                     <button
-                      className="rounded bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
                       onClick={() => openReceiveModal(po)}
+                      className="rounded bg-green-600 px-3 py-2 text-xs text-white hover:bg-green-700"
                     >
                       Receive Delivery
+                    </button>
+
+                    <button
+                      onClick={() => openProgressModal(po)}
+                      className="rounded bg-blue-600 px-3 py-2 text-xs text-white hover:bg-blue-700"
+                    >
+                      Progress
                     </button>
                   </div>
                 </td>
@@ -472,6 +571,130 @@ async function handleConfirmReceipt() {
         </div>
       </div>
     )}
+
+    {showProgressModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+
+    <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl">
+
+      <div className="mb-6 flex items-center justify-between">
+
+        <div>
+          <h2 className="text-xl font-semibold">
+            Sticker Progress
+          </h2>
+
+          <p className="text-sm text-gray-500">
+            {selectedPO?.po_number}
+          </p>
+        </div>
+
+        <button
+          onClick={() => setShowProgressModal(false)}
+          className="text-xl"
+        >
+          ✕
+        </button>
+
+      </div>
+
+      <table className="w-full border-collapse">
+
+        <thead>
+          <tr>
+            <th className="table-th">Product</th>
+            <th className="table-th text-right">Received</th>
+            <th className="table-th text-right">Stickered</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          {progressItems.map(item => (
+
+            <tr key={item.id}>
+
+              <td className="table-td">
+
+                <div className="font-medium">
+                  {item.products?.product_name}
+                </div>
+
+                <div className="text-xs text-gray-500">
+                  {item.products?.sku}
+                </div>
+
+              </td>
+
+              <td className="table-td text-right">
+                {item.quantity_received}
+              </td>
+
+              <td className="table-td">
+
+                <div className="flex items-center justify-end gap-3">
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={item.quantity_received}
+                    value={item.sticker_progress ?? 0}
+                    onChange={(e) => {
+                      const value = Number(e.target.value)
+
+                      setProgressItems(prev =>
+                        prev.map(progressItem =>
+                          progressItem.id === item.id
+                            ? {
+                                ...progressItem,
+                                sticker_progress: value,
+                              }
+                            : progressItem
+                        )
+                      )
+                    }}
+                    className="w-40"
+                  />
+
+                  <span className="w-20 text-right text-sm">
+                    {item.sticker_progress ?? 0} / {item.quantity_received}
+                  </span>
+
+                </div>
+
+              </td>
+
+            </tr>
+
+          ))}
+
+        </tbody>
+
+      </table>
+
+        <div className="mt-6 flex justify-end gap-2">
+
+          <button
+            onClick={() => setShowProgressModal(false)}
+            className="rounded border border-gray-300 px-4 py-2"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={handleSaveProgress}
+            className="rounded bg-black px-4 py-2 text-white hover:bg-gray-800"
+          >
+            Save
+          </button>
+
+        </div>
+
+    </div>
+
+  </div>
+)}
+
     </div>
   )
 }
