@@ -50,6 +50,9 @@ export default function SuppliersPage() {
           <h1 className="text-xl font-bold tracking-tight text-gray-900">
             Suppliers Performance Report
           </h1>
+                    <p className="text-sm text-gray-500">
+            Analyze and visualize performance of suppliers.
+          </p>
         </div>
       </div>
 

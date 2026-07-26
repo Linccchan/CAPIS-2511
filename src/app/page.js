@@ -40,7 +40,7 @@ export default function LoginPage() {
       admin: '/admin/dashboard',
       management: '/admin/dashboard',
       sales: '/order-management/customer-orders',
-      procurement: '/order-management/purchase-orders',
+      procurement: '/procurement/dashboard',
       warehouse: '/warehouse/dashboard',
       supplier: '/supplier/dashboard',
       customer: '/customer/dashboard',

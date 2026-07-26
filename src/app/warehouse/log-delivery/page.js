@@ -25,9 +25,14 @@ export default function LogDeliveryPage() {
         .select(`
           *,
           suppliers(supplier_name),
-          customer_orders(order_number)
+          customer_orders(order_number),
+          purchase_order_items(
+            id,
+            sticker_progress,
+            quantity_ordered
+          )
         `)
-        .eq('status', 'delivered')
+        .in('status', ['delivered', 'Pending Sticker / Label'])
         .order('actual_completed_date', { ascending: false })
 
       if (error) {
@@ -67,7 +72,7 @@ async function handleConfirmReceipt() {
         .from('purchase_order_items')
         .update({
           quantity_received: received,
-          status: 'Staging',
+          status: 'Pending Sticker / Label',
         })
         .eq('id', item.id)
 
@@ -78,7 +83,7 @@ async function handleConfirmReceipt() {
     const { error: poError } = await supabase
       .from('purchase_orders')
       .update({
-        status: 'Staging',
+        status: 'Pending Sticker / Label',
         actual_completed_date: new Date().toISOString().split('T')[0],
       })
       .eq('id', selectedPO.id)
@@ -189,12 +194,30 @@ async function handleConfirmReceipt() {
               <th className="table-th">Supplier</th>
               <th className="table-th">Status</th>
               <th className="table-th">Action</th>
+              <th className="table-th">Sticker / Label Progress</th>
             </tr>
           </thead>
 
           <tbody>
-            {displayed.map((po) => (
-              <tr key={po.id}>
+            {displayed.map((po) => {
+
+            const totalItems =
+              po.purchase_order_items?.reduce(
+                (sum, item) => sum + (item.quantity_ordered ?? 0),
+                0
+              ) ?? 0
+
+            const totalStickered =
+              po.purchase_order_items?.reduce(
+                (sum, item) => sum + (item.sticker_progress ?? 0),
+                0
+              ) ?? 0
+
+            const progress = totalItems
+              ? Math.round((totalStickered / totalItems) * 100)
+              : 0
+
+            return  <tr key={po.id}>
                 <td className="table-td">
                   <span className="td-primary">{po.po_number}</span>
                 </td>
@@ -231,8 +254,45 @@ async function handleConfirmReceipt() {
                     </button>
                   </div>
                 </td>
+
+                <td className="table-td" style={{ minWidth: 180 }}>
+                  {po.status === 'Pending Sticker / Label' ? (
+                    
+                    <>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className="h-full rounded-full bg-black transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+
+                      <div className="mt-1 flex justify-between text-xs">
+                        <span className="text-gray-500">
+                          {totalStickered} / {totalItems} Labeled Items
+                        </span>
+
+                        <span className="font-medium text-gray-700">
+                          {progress}%
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                        <div
+                          className="h-full rounded-full bg-gray-300"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+
+                      <p className="mt-1 text-right text-xs text-gray-400">
+                        Not Available
+                      </p>
+                    </>
+                  )}
+                </td>
               </tr>
-            ))}
+})}
 
             {displayed.length === 0 && (
               <tr>
