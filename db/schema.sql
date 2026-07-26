@@ -1,15 +1,15 @@
 -- =============================================================================
 -- DMC Export Consolidation System — Database Schema (schema-of-record)
 -- =============================================================================
--- Reconstructed on 2026-07-08 by introspecting the live Supabase `public`
--- schema (information_schema.columns + pg_constraint). This file exists because
--- the project had no committed schema; treat it as the source of truth going
--- forward and update it alongside any DB change.
+-- Reconstructed by introspecting the live Supabase `public` schema.
+-- Re-synced 2026-07-26 to match the live DB after teammates applied changes
+-- directly via the SQL editor (warehouse columns, dropped PO status check,
+-- migrations 005/007/008 tables & policies). Treat this as the source of
+-- truth and update it alongside any DB change.
 --
 -- Captured here:   tables, columns, data types, NOT NULL, defaults,
 --                  primary keys (all `id`), foreign keys, CHECK constraints
---                  (see the block at the end of this file; verified against
---                  pg_constraint on 2026-07-09).
+--                  (see the block at the end of this file).
 -- NOT captured here (kept in the live DB — regenerate if you need them):
 --   * UNIQUE constraints and indexes
 --   * FK ON DELETE / ON UPDATE actions (default assumed: NO ACTION)
@@ -26,7 +26,7 @@ create table profiles (
   id            uuid primary key references auth.users (id),  -- = Supabase auth user id
   full_name     text not null,
   email         text not null,
-  role          text not null,            -- admin | sales | management | procurement | warehouse | customer
+  role          text not null,            -- admin | sales | management | procurement | warehouse | customer | supplier
   company_name  text,
   phone_number  text,
   created_at    timestamptz default now()
@@ -41,6 +41,7 @@ create table suppliers (
   phone             text,
   address           text,
   odoo_supplier_id  text,
+  profile_id        uuid references profiles (id),   -- migration 005; links a supplier login account
   created_at        timestamptz default now()
 );
 
@@ -123,7 +124,8 @@ create table purchase_orders (
   order_id                uuid not null references customer_orders (id),
   supplier_id             uuid not null references suppliers (id),
   po_number               text not null,
-  status                  text not null default 'draft',
+  status                  text not null default 'draft',   -- UNCONSTRAINED: status check was dropped so the
+                                                           -- warehouse module can also write 'Staging' / 'Ready for Shipment'
   issued_date             date,
   expected_delivery_date  date,
   actual_completed_date   date,
@@ -138,6 +140,8 @@ create table purchase_order_items (
   product_id         uuid not null references products (id),
   quantity_ordered   numeric not null,
   quantity_received  numeric not null default 0,
+  status             text not null default 'pending',  -- added by warehouse work (free text; e.g. 'Ready for Shipment')
+  sticker_progress   integer default 0,                -- added by warehouse work
   created_at         timestamptz default now()
 );
 
@@ -170,7 +174,9 @@ create table warehouse_locations (
   location_code text not null,
   description   text,
   is_active     boolean default true,
-  created_at    timestamptz default now()
+  created_at    timestamptz default now(),
+  occupied          boolean not null default false,  -- added by warehouse work
+  purchase_order_id uuid                             -- added by warehouse work (plain uuid; no FK in live DB)
 );
 
 create table inventory_batches (
@@ -309,11 +315,52 @@ create table number_sequences (
   primary key (prefix, year)
 );
 
--- ---------- CHECK constraints (verified from pg_constraint, 2026-07-09) -----
--- Every status/role/type vocabulary is enforced in the live DB:
+-- ---------- Added via migration 007 (tables the staff screens needed) --------
+
+-- Sticker/label design approval workflow (distinct from labeling_tasks)
+create table sticker_designs (
+  id               uuid primary key default gen_random_uuid(),
+  order_id         uuid not null references customer_orders (id),
+  product_id       uuid not null references products (id),
+  destination      text,
+  design_file_path text,
+  status           text not null default 'photo_sent',  -- photo_sent | awaiting_customer | design_received | printed
+  created_at       timestamptz default now()
+);
+
+-- Versioned supplier cost per product (manual entry or PO-derived)
+create table supplier_product_costs (
+  id             uuid primary key default gen_random_uuid(),
+  product_id     uuid not null references products (id),
+  supplier_id    uuid not null references suppliers (id),
+  unit_cost      numeric not null,
+  currency       text not null default 'USD',
+  effective_from date,
+  effective_to   date,                     -- null = current cost
+  source         text default 'manual',    -- manual | po_derived
+  updated_by     uuid references profiles (id),
+  created_at     timestamptz default now()
+);
+
+-- In-app notifications (dispatch alerts, cost-update prompts, ...)
+create table notifications (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references profiles (id),
+  order_id   uuid references customer_orders (id),
+  type       text,
+  title      text,
+  message    text,
+  is_read    boolean not null default false,
+  created_at timestamptz default now()
+);
+
+-- ---------- CHECK constraints (re-verified from pg_constraint, 2026-07-26) ---
+-- Most status/role/type columns are vocabulary-enforced. EXCEPTION:
+-- purchase_orders.status and purchase_order_items.status are now FREE TEXT
+-- (their check constraints were dropped for the warehouse module).
 
 alter table profiles add constraint profiles_role_check
-  check (role in ('admin', 'customer', 'sales', 'procurement', 'warehouse', 'management'));
+  check (role in ('admin', 'customer', 'sales', 'procurement', 'warehouse', 'management', 'supplier'));
 
 alter table suppliers add constraint suppliers_supplier_type_check
   check (supplier_type in ('manufacturer', 'distributor', 'supermarket'));
@@ -326,14 +373,15 @@ alter table customer_orders add constraint customer_orders_status_check
 alter table customer_order_items add constraint customer_order_items_quantity_ordered_check
   check (quantity_ordered > 0);
 
-alter table purchase_orders add constraint purchase_orders_status_check
-  check (status in ('draft', 'sent', 'partially_delivered', 'delivered', 'cancelled'));
+-- purchase_orders.status: check constraint was DROPPED via the SQL editor so the
+-- warehouse module can write 'Staging' / 'Ready for Shipment'. Values in use:
+-- draft | sent | partially_delivered | delivered | cancelled | Staging | Ready for Shipment
 
 alter table purchase_order_items add constraint purchase_order_items_quantity_ordered_check
   check (quantity_ordered > 0);
 
 alter table supplier_deliveries add constraint supplier_deliveries_delivery_status_check
-  check (delivery_status in ('received', 'with_discrepancy', 'rejected'));
+  check (delivery_status in ('pending_confirmation', 'received', 'with_discrepancy', 'rejected'));
 
 alter table supplier_delivery_items add constraint supplier_delivery_items_condition_status_check
   check (condition_status in ('good', 'damaged', 'missing', 'wrong_item'));
