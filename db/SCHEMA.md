@@ -89,9 +89,12 @@ RLS is **enabled on all 21 tables**. Policy coverage as of the snapshot:
   migration 002), `documents` (customer-own non-draft + staff read,
   migration 003).
 - **RLS on but NO policies (currently deny-all to app users):**
-  `payments`, `labeling_tasks`, `staging_tasks`, `suppliers`,
-  `supplier_deliveries`, `supplier_delivery_items`, `supplier_performance`,
-  `prediction_records`, `warehouse_locations`, `activity_logs`.
+  `supplier_performance` (read via migration 005), `prediction_records`,
+  `activity_logs`.
+- `payments` (migration 010): customers insert/read own via
+  billing→order→customer; admin/sales verify (update). Proof files live in
+  the private `payment-proofs` storage bucket (customers upload/read under
+  their own user-id folder; admin/sales/management read all).
 
 > **Prepared, not yet applied:** migration `008` adds SELECT-only policies for
 > authenticated customers to read their own `payments`, `prediction_records`,

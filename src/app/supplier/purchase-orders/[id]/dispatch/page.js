@@ -60,7 +60,9 @@ export default function LogDispatchPage() {
         for (const item of items) {
             if (!item.fulfilled)
                 continue;
-            const qty = Number(item.dispatch_qty);
+            // Cannot dispatch more than the undelivered remainder of the PO line
+            const remaining = Number(item.quantity_ordered) - Number(item.quantity_received);
+            const qty = Math.min(Number(item.dispatch_qty), remaining);
             if (qty <= 0)
                 continue;
             await supabase.from('supplier_delivery_items').insert({
