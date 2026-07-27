@@ -50,6 +50,16 @@ export default function LogDeliveryPage() {
         setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i));
     }
     async function handleConfirm() {
+        // Stock recorded without a location is exactly the problem this module
+        // exists to solve — staff would be back to hunting by memory.
+        const missingLocation = items.some(i => {
+            const qty = Math.max(0, Math.min(Number(i.actual_qty) || 0, Number(i.quantity_delivered)));
+            return qty > 0 && !i.location_id;
+        });
+        if (missingLocation) {
+            alert('Assign a warehouse location for every product you are receiving.');
+            return;
+        }
         setSaving(true);
         const { data: { user } } = await supabase.auth.getUser();
         for (const item of items) {
@@ -73,6 +83,13 @@ export default function LogDeliveryPage() {
                     quantity_staged: 0,
                     received_date: new Date().toISOString().split('T')[0],
                 });
+                // Keep the occupied flag in step with reality, otherwise the
+                // locations screen still advertises this slot as empty.
+                if (item.location_id) {
+                    await supabase.from('warehouse_locations')
+                        .update({ occupied: true })
+                        .eq('id', item.location_id);
+                }
             }
         }
         await supabase.from('supplier_deliveries').update({
