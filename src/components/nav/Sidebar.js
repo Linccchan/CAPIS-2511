@@ -46,6 +46,27 @@ const NAV = {
     ],
   },
 
+  // Sales handles customer-facing order processing: quotations, the pro forma
+  // invoice, and payment verification.
+  sales: {
+    sections: [
+      {
+        title: 'Sales',
+        items: [
+          { label: 'Customer Orders', href: '/order-management/customer-orders' },
+          { label: 'Billing & Payments', href: '/order-management/billing' },
+        ],
+      },
+      {
+        title: 'Monitoring',
+        items: [
+          { label: 'Order Management', href: '/order-management' },
+          { label: 'Supplier Deliveries', href: '/order-management/supplier-deliveries' },
+        ],
+      },
+    ],
+  },
+
   procurement: {
     sections: [
       {
