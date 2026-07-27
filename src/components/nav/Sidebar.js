@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 
 const NAV = {
@@ -190,12 +190,34 @@ export default function Sidebar({ role, userName }) {
     orderManagement: true,
   })
 
+  // The menu must follow WHO is signed in, not which folder the page lives in.
+  // Otherwise a management user opening an /admin page gets the admin menu and
+  // loses the way back to their own screens. The prop is only a fallback.
+  const [account, setAccount] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    const loadAccount = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (active && profile) setAccount(profile)
+    }
+    loadAccount()
+    return () => { active = false }
+  }, [])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
-  const portal = NAV[role] || { sections: [] }
+  const portal = NAV[account?.role || role] || { sections: [] }
+  const displayName = account?.full_name || userName
 
   return (
     <div className="w-56 bg-white border-r border-gray-200 flex flex-col p-4 fixed h-full">
@@ -287,9 +309,9 @@ export default function Sidebar({ role, userName }) {
       ))}
 
       <div className="mt-auto">
-        {userName && (
+        {displayName && (
           <p className="mb-2 text-xs uppercase text-gray-400">
-            Signed in — {userName}
+            Signed in — {displayName}
           </p>
         )}
 
