@@ -70,7 +70,10 @@ export default function LogDeliveryPage() {
                 remarks: item.condition !== 'good' ? `Condition: ${item.condition}` : null,
             }).eq('id', item.id);
             await supabase.from('purchase_order_items')
-                .update({ quantity_received: actualQty })
+                // Received goods still need their compliance stickers before
+                // staging; without this status the stickering screen keeps its
+                // controls disabled and the PO can never reach Staging.
+                .update({ quantity_received: actualQty, status: 'Pending Sticker / Label' })
                 .eq('purchase_order_id', params.poId)
                 .eq('product_id', item.product_id);
             if (actualQty > 0) {
