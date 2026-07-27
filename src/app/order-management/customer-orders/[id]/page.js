@@ -121,7 +121,7 @@ export default function CustomerOrderDetailsPage() {
             <Card title="PFI State"><Badge tone={order.billing ? 'black' : 'gray'}>{order.pfiState}</Badge></Card>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-3">
             <Card title="Customer Information">
               <dl className="grid gap-4 text-sm sm:grid-cols-2">
                 <div>
@@ -139,6 +139,26 @@ export default function CustomerOrderDetailsPage() {
                 <div>
                   <dt className="font-medium text-gray-500">Current Status</dt>
                   <dd className="mt-1"><Badge tone={statusTone(order.status)}>{order.status}</Badge></dd>
+                </div>
+              </dl>
+            </Card>
+
+            <Card title="Request Details">
+              <dl className="grid gap-4 text-sm">
+                <div>
+                  <dt className="font-medium text-gray-500">Delivery Destination</dt>
+                  <dd className="mt-1 text-gray-900">{order.deliveryLocationLabel}</dd>
+                  <dd className="mt-1 text-xs text-gray-500">
+                    {[order.deliveryAddress, order.deliveryCountry].filter(Boolean).join(' · ')}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-gray-500">Preferred Shipping Date</dt>
+                  <dd className="mt-1 text-gray-900">{formatDate(order.preferredShipDate)}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-gray-500">Special Instructions</dt>
+                  <dd className="mt-1 whitespace-pre-wrap text-gray-900">{order.specialInstructions || 'None provided'}</dd>
                 </div>
               </dl>
             </Card>
@@ -181,6 +201,7 @@ export default function CustomerOrderDetailsPage() {
                     <tr>
                       <th className="py-3 pr-4">Product</th>
                       <th className="py-3 pr-4">Quantity</th>
+                      <th className="py-3 pr-4">Notes</th>
                       <th className="py-3 pr-4">Unit Price</th>
                       <th className="py-3">Total</th>
                     </tr>
@@ -190,6 +211,7 @@ export default function CustomerOrderDetailsPage() {
                       <tr key={item.id}>
                         <td className="py-3 pr-4 font-medium">{item.productName}</td>
                         <td className="py-3 pr-4">{item.quantity}</td>
+                        <td className="py-3 pr-4 text-gray-600">{item.notes || '—'}</td>
                         <td className="py-3 pr-4 text-gray-600">{money(item.unitPrice)}</td>
                         <td className="py-3 font-medium">{money(item.total)}</td>
                       </tr>
