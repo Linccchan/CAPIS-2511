@@ -286,6 +286,11 @@ export default function OrderDetail() {
                   balance of <span className="font-medium text-gray-900">${billing.balance_amount?.toFixed(2) || '—'}</span> via
                   telegraphic transfer and record it below.
                 </p>
+                {payments.some((p) => p.payment_type === 'balance' && p.status === 'rejected') && (
+                  <div className="bg-red-50 text-red-600 text-sm p-3 rounded mb-4">
+                    Your previous payment record was rejected. Please check the details and submit again, or contact DMC.
+                  </div>
+                )}
                 <div className="grid grid-cols-4 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Bank</label>
