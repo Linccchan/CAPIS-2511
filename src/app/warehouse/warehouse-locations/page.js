@@ -11,11 +11,9 @@ export default function WarehouseLocationsPage() {
     let active = true
 
     async function load() {
-      // Join the purchase order so the card can show its PO number and
-      // supplier instead of an unreadable database id.
       const { data, error } = await supabase
         .from('warehouse_locations')
-        .select('*, purchase_orders(po_number, suppliers(supplier_name), customer_orders(order_number))')
+        .select('*')
         .order('location_code')
 
       if (error) {
@@ -23,7 +21,25 @@ export default function WarehouseLocationsPage() {
         return
       }
 
-      if (active) setLocations(data ?? [])
+      // warehouse_locations.purchase_order_id has no foreign key, so the
+      // purchase orders can't be embedded — look them up and attach in code
+      // to show a readable PO number instead of a raw id.
+      const poIds = [...new Set((data ?? []).map((l) => l.purchase_order_id).filter(Boolean))]
+      let poById = {}
+      if (poIds.length) {
+        const { data: pos } = await supabase
+          .from('purchase_orders')
+          .select('id, po_number, suppliers(supplier_name), customer_orders(order_number)')
+          .in('id', poIds)
+        poById = Object.fromEntries((pos ?? []).map((po) => [po.id, po]))
+      }
+
+      if (active) {
+        setLocations((data ?? []).map((l) => ({
+          ...l,
+          purchase_orders: l.purchase_order_id ? poById[l.purchase_order_id] || null : null,
+        })))
+      }
     }
 
     load()
