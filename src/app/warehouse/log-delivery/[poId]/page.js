@@ -50,6 +50,16 @@ export default function LogDeliveryPage() {
         setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i));
     }
     async function handleConfirm() {
+        // Stock recorded without a location is exactly the problem this module
+        // exists to solve — staff would be back to hunting by memory.
+        const missingLocation = items.some(i => {
+            const qty = Math.max(0, Math.min(Number(i.actual_qty) || 0, Number(i.quantity_delivered)));
+            return qty > 0 && !i.location_id;
+        });
+        if (missingLocation) {
+            alert('Assign a warehouse location for every product you are receiving.');
+            return;
+        }
         setSaving(true);
         const { data: { user } } = await supabase.auth.getUser();
         for (const item of items) {
@@ -60,7 +70,10 @@ export default function LogDeliveryPage() {
                 remarks: item.condition !== 'good' ? `Condition: ${item.condition}` : null,
             }).eq('id', item.id);
             await supabase.from('purchase_order_items')
-                .update({ quantity_received: actualQty })
+                // Received goods still need their compliance stickers before
+                // staging; without this status the stickering screen keeps its
+                // controls disabled and the PO can never reach Staging.
+                .update({ quantity_received: actualQty, status: 'Pending Sticker / Label' })
                 .eq('purchase_order_id', params.poId)
                 .eq('product_id', item.product_id);
             if (actualQty > 0) {
@@ -73,6 +86,13 @@ export default function LogDeliveryPage() {
                     quantity_staged: 0,
                     received_date: new Date().toISOString().split('T')[0],
                 });
+                // Keep the occupied flag in step with reality, otherwise the
+                // locations screen still advertises this slot as empty.
+                if (item.location_id) {
+                    await supabase.from('warehouse_locations')
+                        .update({ occupied: true, purchase_order_id: params.poId })
+                        .eq('id', item.location_id);
+                }
             }
         }
         await supabase.from('supplier_deliveries').update({
@@ -88,6 +108,18 @@ export default function LogDeliveryPage() {
             status: allDelivered ? 'delivered' : 'partially_delivered',
             ...(allDelivered ? { actual_completed_date: new Date().toISOString().split('T')[0] } : {}),
         }).eq('id', params.poId);
+        // Move the customer tracker: still waiting on other suppliers, or all
+        // goods in and warehouse preparation (stickering/staging) can begin.
+        const orderId = po.customer_orders?.id;
+        if (orderId) {
+            const { data: orderPOs } = await supabase.from('purchase_orders')
+                .select('status').eq('order_id', orderId);
+            const allPOsDelivered = (orderPOs ?? []).every(p => String(p.status).toLowerCase() === 'delivered');
+            await supabase.from('customer_orders')
+                .update({ status: allPOsDelivered ? 'warehouse_preparation' : 'partially_received' })
+                .eq('id', orderId)
+                .in('status', ['payment_verified', 'procurement_started', 'partially_received']);
+        }
         // Notify admin
         const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
         for (const a of admins ?? []) {

@@ -21,7 +21,25 @@ export default function WarehouseLocationsPage() {
         return
       }
 
-      if (active) setLocations(data ?? [])
+      // warehouse_locations.purchase_order_id has no foreign key, so the
+      // purchase orders can't be embedded — look them up and attach in code
+      // to show a readable PO number instead of a raw id.
+      const poIds = [...new Set((data ?? []).map((l) => l.purchase_order_id).filter(Boolean))]
+      let poById = {}
+      if (poIds.length) {
+        const { data: pos } = await supabase
+          .from('purchase_orders')
+          .select('id, po_number, suppliers(supplier_name), customer_orders(order_number)')
+          .in('id', poIds)
+        poById = Object.fromEntries((pos ?? []).map((po) => [po.id, po]))
+      }
+
+      if (active) {
+        setLocations((data ?? []).map((l) => ({
+          ...l,
+          purchase_orders: l.purchase_order_id ? poById[l.purchase_order_id] || null : null,
+        })))
+      }
     }
 
     load()
@@ -39,7 +57,9 @@ export default function WarehouseLocationsPage() {
     return locations.filter(
       (location) =>
         location.location_code?.toLowerCase().includes(q) ||
-        location.description?.toLowerCase().includes(q)
+        location.description?.toLowerCase().includes(q) ||
+        location.purchase_orders?.po_number?.toLowerCase().includes(q) ||
+        location.purchase_orders?.suppliers?.supplier_name?.toLowerCase().includes(q)
     )
   }, [locations, search])
 
@@ -63,6 +83,7 @@ export default function WarehouseLocationsPage() {
             ? {
                 ...location,
                 purchase_order_id: null,
+                purchase_orders: null,
                 occupied: false,
             }
             : location
@@ -176,7 +197,10 @@ export default function WarehouseLocationsPage() {
             </div>
 
 
-            {location.purchase_order_id && (
+            {/* Show for any occupied slot, not only ones with a linked PO —
+                otherwise a slot marked occupied without a reference can never
+                be released from this screen. */}
+            {(location.purchase_order_id || location.occupied) && (
             <div
                 style={{
                 marginTop: 0,
@@ -199,13 +223,26 @@ export default function WarehouseLocationsPage() {
 
                 <div
                 style={{
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                    wordBreak: 'break-all',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    marginBottom: 2,
+                }}
+                >
+                {location.purchase_orders?.po_number
+                  || (location.purchase_order_id ? 'Unknown PO' : 'No purchase order linked')}
+                </div>
+
+                <div
+                style={{
+                    fontSize: 11,
+                    opacity: .8,
                     marginBottom: 10,
                 }}
                 >
-                {location.purchase_order_id}
+                {[
+                  location.purchase_orders?.suppliers?.supplier_name,
+                  location.purchase_orders?.customer_orders?.order_number,
+                ].filter(Boolean).join(' · ') || '—'}
                 </div>
 
                 <button

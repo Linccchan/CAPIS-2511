@@ -5,10 +5,23 @@ import { supabase } from '@/lib/supabaseClient'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useRouter } from 'next/navigation'
 
+// A purchase order counts as fully received once the goods are physically in,
+// whatever downstream warehouse stage it has reached.
+const RECEIVED_STATUSES = [
+  'delivered',
+  'pending sticker / label',
+  'staging',
+  'ready for shipment',
+  'ready_for_shipment',
+]
+
 export default function LogDeliveryPage() {
   const router = useRouter()
 
   const [purchaseOrders, setPurchaseOrders] = useState([])
+  // Dispatches the supplier has logged that the warehouse has not confirmed
+  // yet. These POs are still 'sent', so they never appeared in the list below.
+  const [awaitingReceipt, setAwaitingReceipt] = useState([])
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedPO, setSelectedPO] = useState(null)
@@ -34,7 +47,10 @@ export default function LogDeliveryPage() {
             quantity_ordered
           )
         `)
-        .in('status', ['delivered', 'Pending Sticker / Label'])
+        // Partial deliveries are normal at DMC (suppliers deliver in tranches),
+        // so they must stay visible — otherwise the PO disappears from the
+        // warehouse's view and the remainder can never be received.
+        .in('status', ['delivered', 'partially_delivered', 'Partially Delivered', 'Pending Sticker / Label'])
         .order('actual_completed_date', { ascending: false })
 
       if (error) {
@@ -42,7 +58,26 @@ export default function LogDeliveryPage() {
         return
       }
 
-      if (active) setPurchaseOrders(data ?? [])
+      const { data: pending } = await supabase
+        .from('supplier_deliveries')
+        .select(`
+          id,
+          delivery_date,
+          purchase_orders(
+            id,
+            po_number,
+            status,
+            suppliers(supplier_name),
+            customer_orders(order_number)
+          )
+        `)
+        .eq('delivery_status', 'pending_confirmation')
+        .order('delivery_date', { ascending: false })
+
+      if (active) {
+        setPurchaseOrders(data ?? [])
+        setAwaitingReceipt((pending ?? []).filter((d) => d.purchase_orders))
+      }
     }
 
     load()
@@ -92,14 +127,37 @@ async function handleConfirmReceipt() {
 
     if (poError) throw poError
 
+    // Goods are in — move the customer's tracker on. Without this the order
+    // would stay at "partially received" even once every supplier delivered.
+    if (selectedPO.order_id) {
+      const { data: orderPOs } = await supabase
+        .from('purchase_orders')
+        .select('status')
+        .eq('order_id', selectedPO.order_id)
+
+      const allReceived = (orderPOs ?? []).every((po) =>
+        RECEIVED_STATUSES.includes(String(po.status).toLowerCase()),
+      )
+
+      await supabase
+        .from('customer_orders')
+        .update({ status: allReceived ? 'warehouse_preparation' : 'partially_received' })
+        .eq('id', selectedPO.order_id)
+        .in('status', ['payment_verified', 'procurement_started', 'partially_received'])
+    }
+
     // Close modal
     setShowReceiveModal(false)
     setSelectedPO(null)
     setItems([])
 
-    // Remove it from the current table since it's no longer "delivered"
+    // Keep the row visible with its new status — it still belongs in this list.
     setPurchaseOrders(prev =>
-      prev.filter(po => po.id !== selectedPO.id)
+      prev.map(po =>
+        po.id === selectedPO.id
+          ? { ...po, status: 'Pending Sticker / Label' }
+          : po
+      )
     )
 
     alert('Delivery received successfully.')
@@ -276,6 +334,47 @@ const handleSaveProgress = async () => {
           style={{ width: 260 }}
         />
       </div>
+
+      {/* Supplier has dispatched, warehouse has not confirmed receipt yet.
+          These POs are still 'sent', so they are not in the table below. */}
+      {awaitingReceipt.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
+            Awaiting your confirmation ({awaitingReceipt.length})
+          </div>
+          <div className="card">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th className="table-th">PO #</th>
+                  <th className="table-th">Order</th>
+                  <th className="table-th">Supplier</th>
+                  <th className="table-th">Dispatched</th>
+                  <th className="table-th">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {awaitingReceipt.map((d) => (
+                  <tr key={d.id}>
+                    <td className="table-td"><span className="td-primary">{d.purchase_orders.po_number}</span></td>
+                    <td className="table-td">{d.purchase_orders.customer_orders?.order_number || '—'}</td>
+                    <td className="table-td">{d.purchase_orders.suppliers?.supplier_name || '—'}</td>
+                    <td className="table-td">{d.delivery_date || '—'}</td>
+                    <td className="table-td">
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => router.push(`/warehouse/log-delivery/${d.purchase_orders.id}`)}
+                      >
+                        Confirm receipt
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

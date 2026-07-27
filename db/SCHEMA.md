@@ -1,13 +1,15 @@
 # Database Schema Reference
 
 Source-of-truth documentation for the DMC Export Consolidation System database
-(Supabase / PostgreSQL). Snapshot taken **2026-07-08** by introspecting the live
+(Supabase / PostgreSQL). **Re-synced 2026-07-26** by introspecting the live
 `public` schema. The runnable DDL is in [`schema.sql`](./schema.sql); this file
 adds the things DDL doesn't show — RLS state, roles, status vocabulary, and
 known gaps between the code and the database.
 
-> The database was built ahead of the UI: **all 21 tables for all 5 modules
-> already exist**, even though only the customer screens are coded so far.
+> **26 tables** — all five modules built, plus a customer chatbot. The team
+> sometimes applies DB changes directly via the Supabase SQL editor, so re-run
+> the introspection query (bottom of this file) after any schema change to keep
+> these docs accurate.
 
 ## Tables by module
 
@@ -15,43 +17,40 @@ known gaps between the code and the database.
 |--------|--------|
 | Auth / core | `profiles`, `customers`, `customer_locations` (migration 006), `products`, `suppliers` |
 | 1 — Customer Interaction | `customer_orders`, `customer_order_items` |
-| 2 — Order Management / procurement | `purchase_orders`, `purchase_order_items`, `supplier_deliveries`, `supplier_delivery_items` |
-| 3 — Supplier & Warehouse | `warehouse_locations`, `inventory_batches`, `labeling_tasks`, `staging_tasks`, `shipments` |
+| 2 — Order Management / procurement | `purchase_orders`, `purchase_order_items`, `supplier_deliveries`, `supplier_delivery_items`, `supplier_product_costs` |
+| 3 — Supplier & Warehouse | `warehouse_locations`, `inventory_batches`, `labeling_tasks`, `staging_tasks`, `shipments`, `sticker_designs` |
 | 4 — Predictive Analytics | `prediction_records`, `supplier_performance` |
 | 5 — Billing & Payment | `billings`, `payments` |
-| Cross-cutting | `documents`, `activity_logs` |
+| Cross-cutting | `documents`, `activity_logs`, `notifications`, `number_sequences` |
 
 ## Conventions
 
 - Every primary key is `id uuid default gen_random_uuid()` (except `profiles.id`,
   which equals the Supabase `auth.users` id).
 - Audit columns are `timestamptz default now()`.
-- **No Postgres enums, but statuses are NOT free text** — every status/role/type
-  column is vocabulary-enforced by a CHECK constraint (verified from
-  `pg_constraint`, 2026-07-09; full DDL at the end of `schema.sql`). Writing any
-  other value fails with a `23514` check-violation error.
+- **No Postgres enums; most status/role/type columns are CHECK-enforced** (full
+  DDL at the end of `schema.sql`) — an out-of-vocabulary value fails with a
+  `23514` error. **Exception:** `purchase_orders.status` and
+  `purchase_order_items.status` are now **free text** (their check constraints
+  were dropped so the warehouse module can use `'Staging'` / `'Ready for Shipment'`).
 
 ## Roles
 
 `profiles.role` is enforced by `profiles_role_check`:
 
-`admin` · `sales` · `management` · `procurement` · `warehouse` · `customer`
+`admin` · `sales` · `management` · `procurement` · `warehouse` · `customer` · `supplier`
 
-> There is a `suppliers` table but no `supplier` login role. The wireframes
-> include a supplier portal, so when that module is built the
-> `profiles_role_check` constraint must be altered to allow `'supplier'`.
-> Migration `005_supplier_role_and_portal_rls.sql` is **prepared but NOT yet
-> applied** — it adds the role, `suppliers.profile_id`, the
-> `pending_confirmation` delivery status, and all supplier-portal RLS
-> policies. Run it only once the supplier/warehouse module is aligned with
-> this shared database.
+> Migration `005` is **applied** — it added the `supplier` role,
+> `suppliers.profile_id` (links a supplier login to a supplier row), the
+> `pending_confirmation` delivery status, and the supplier-portal RLS policies.
 
 ## Status columns — allowed values (CHECK-enforced) & defaults
 
 | Table | Column | Allowed values (default in **bold**) |
 |-------|--------|--------------------------------------|
 | `customer_orders` | `status` | **draft**, submitted, awaiting_down_payment, payment_verified, procurement_started, partially_received, warehouse_preparation, ready_for_shipment, shipped, completed, cancelled |
-| `purchase_orders` | `status` | **draft**, sent, partially_delivered, delivered, cancelled |
+| `purchase_orders` | `status` | **FREE TEXT** (check dropped) — in use: draft, sent, partially_delivered, delivered, cancelled, Staging, Ready for Shipment |
+| `purchase_order_items` | `status` | **FREE TEXT** (default **pending**) — e.g. Ready for Shipment |
 | `billings` | `billing_status` | **pending**, partially_paid, paid, cancelled |
 | `payments` | `status` | **pending**, verified, rejected |
 | `payments` | `payment_type` | down_payment, balance |
@@ -61,7 +60,7 @@ known gaps between the code and the database.
 | `labeling_tasks` | `status` | **pending**, in_progress, completed |
 | `staging_tasks` | `status` | **pending**, in_progress, completed |
 | `shipments` | `status` | **planning**, ready_for_loading, loaded, shipped, completed, cancelled |
-| `supplier_deliveries` | `delivery_status` | **received**, with_discrepancy, rejected |
+| `supplier_deliveries` | `delivery_status` | pending_confirmation, **received**, with_discrepancy, rejected |
 | `supplier_delivery_items` | `condition_status` | **good**, damaged, missing, wrong_item |
 | `suppliers` | `supplier_type` | manufacturer, distributor, supermarket |
 
@@ -81,34 +80,24 @@ sent to customer) are **derived**, not stored: e.g. `submitted` with no
 
 ## Row-Level Security (RLS) state
 
-RLS is **enabled on all 21 tables**. Policy coverage as of the snapshot:
+RLS is enabled on every table, and **migrations 002–010 are all applied**, so
+nearly every table now has policies:
 
-- **Have policies:** `profiles`, `customers`, `products`, `customer_orders`,
-  `customer_order_items`, `purchase_orders`, `purchase_order_items`,
-  `shipments`, `inventory_batches`, `billings` (customer-own + staff read,
-  migration 002), `documents` (customer-own non-draft + staff read,
-  migration 003).
-- **RLS on but NO policies (currently deny-all to app users):**
-  `supplier_performance` (read via migration 005), `prediction_records`,
-  `activity_logs`.
-- `payments` (migration 010): customers insert/read own via
-  billing→order→customer; admin/sales verify (update). Proof files live in
-  the private `payment-proofs` storage bucket (customers upload/read under
-  their own user-id folder; admin/sales/management read all).
-
-> **Prepared, not yet applied:** migration `008` adds SELECT-only policies for
-> authenticated customers to read their own `payments`, `prediction_records`,
-> `labeling_tasks`, `staging_tasks`, and `supplier_deliveries` through the
-> existing customer-order ownership chain. It supports the read-only customer
-> chatbot and adds no write access.
-
-> **Prepared, not yet applied:** migration `005` (supplier role + portal RLS)
-> and migration `007` (staff-module RLS: billings insert/update for
-> admin/sales; labeling/staging/warehouse_locations policies; warehouse
-> access to POs and order status) — `007` also **creates three tables the
-> staff screens expect** that never existed in the shared DB:
-> `notifications`, `sticker_designs`, `supplier_product_costs`. Run 005 then
-> 007, then `db/seed_demo.sql` for demo data.
+- **Customer-scoped read** (own data via the order→customer→profile chain):
+  `customer_orders`, `customer_order_items`, `billings`, `payments`,
+  `documents`, `customer_locations`, plus — for the chatbot (migration 008) —
+  `prediction_records`, `labeling_tasks`, `staging_tasks`, `supplier_deliveries`.
+- **Staff role-based** (via `has_role(...)`): products, purchase_orders,
+  purchase_order_items, suppliers, supplier_deliveries, supplier_delivery_items,
+  supplier_performance, supplier_product_costs, labeling_tasks, staging_tasks,
+  warehouse_locations, sticker_designs, inventory_batches, shipments — plus
+  billings/payments verify (admin/sales) and warehouse writes (migration 007).
+- **Supplier portal** (migration 005): suppliers see only their own POs,
+  deliveries, and performance via `suppliers.profile_id`.
+- **Payment proofs** live in the private `payment-proofs` storage bucket
+  (migration 010): customers upload/read their own folder; staff read all.
+- Still deny-all (no policies): `activity_logs`, `number_sequences`
+  (function-only).
 
 RLS helper functions live in the DB: `has_role(text[])`, `current_user_role()`,
 `customer_can_read_order()`, `customer_can_read_order_item()`,
@@ -127,21 +116,20 @@ Application RPCs (all security-definer):
   `number_sequences` (RLS-locked, function-only access). Used for QT- numbers
   on quotation submit and ORD- numbers on approval.
 
-## Known code ↔ schema gaps (to fix)
+## Known code ↔ schema gaps
 
-1. **Login role routing is wrong** — `src/app/page.js` uses `executive` and
-   `supplier`; the DB uses `management`, and `sales`/`procurement` staff fall
-   through to the customer dashboard. Map `executive`→`management`, drop
-   `supplier`, and add `sales`/`procurement` routes.
-2. **Deny-all RLS breaks module screens** — tables without policies return
-   nothing to app users. `billings` was fixed in migration 002; add customer/
-   staff read policies for the remaining tables as each module is built.
-3. **Over-permissive policies (security)** — `customer_orders` and
-   `customer_order_items` are readable by role `public` (`qual = true`), and
-   `customers` by any authenticated user. Tighten before UAT/demo.
-4. **Status vocabulary is CHECK-enforced** — any status a screen writes or
-   filters on must appear in the allowed-values table above, or inserts fail
-   with error `23514`.
+1. ✅ **Login role routing** — fixed; all seven roles route to real dashboards.
+2. **Over-permissive legacy policies (security)** — `customer_orders` and
+   `customer_order_items` still have a `SELECT` policy for role `public`
+   (`qual = true`), so anyone (even anon) can read all orders/items; `customers`
+   is readable by any authenticated user. Tighten before final submission.
+3. **Mixed PO status vocabulary** — `purchase_orders.status` now carries both
+   lowercase pipeline values (`sent`, `delivered`) and Title-Case warehouse
+   values (`Staging`, `Ready for Shipment`) because its check was dropped.
+   Worth standardizing later.
+4. **Not every DB change is captured in the repo** — teammates apply some
+   changes via the SQL editor. Re-run the introspection query after schema
+   changes so these docs stay accurate.
 
 ## Regenerating this snapshot
 

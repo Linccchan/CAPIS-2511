@@ -38,7 +38,7 @@ export default function LoginPage() {
 
     const dashboardByRole = {
       admin: '/admin/dashboard',
-      management: '/admin/dashboard',
+      management: '/management/analytics',
       sales: '/order-management/customer-orders',
       procurement: '/procurement/dashboard',
       warehouse: '/warehouse/dashboard',

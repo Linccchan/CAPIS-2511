@@ -290,6 +290,24 @@ export function buildOrderManagementData(raw) {
   }
 }
 
+// Keep the customer-facing tracker in step with what staff actually do.
+// Without this the order would sit at "payment verified" forever, since the
+// downstream screens only move purchase-order and warehouse records.
+export async function advanceCustomerOrderStatus(orderId, nextStatus, allowedFrom) {
+  if (!orderId) return
+  const { data: order } = await supabase
+    .from('customer_orders')
+    .select('status')
+    .eq('id', orderId)
+    .maybeSingle()
+  if (!order) return
+  if (allowedFrom && !allowedFrom.includes(order.status)) return
+  await supabase
+    .from('customer_orders')
+    .update({ status: nextStatus })
+    .eq('id', orderId)
+}
+
 export async function createRecord(table, payload) {
   let nextPayload = { ...payload }
 

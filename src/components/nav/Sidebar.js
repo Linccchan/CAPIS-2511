@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 
 const NAV = {
@@ -41,6 +41,27 @@ const NAV = {
         title: 'Reports',
         items: [
           { label: 'Suppliers Performance', href: '/warehouse/suppliers-performance' },
+        ],
+      },
+    ],
+  },
+
+  // Sales handles customer-facing order processing: quotations, the pro forma
+  // invoice, and payment verification.
+  sales: {
+    sections: [
+      {
+        title: 'Sales',
+        items: [
+          { label: 'Customer Orders', href: '/order-management/customer-orders' },
+          { label: 'Billing & Payments', href: '/order-management/billing' },
+        ],
+      },
+      {
+        title: 'Monitoring',
+        items: [
+          { label: 'Order Management', href: '/order-management' },
+          { label: 'Supplier Deliveries', href: '/order-management/supplier-deliveries' },
         ],
       },
     ],
@@ -100,6 +121,7 @@ const NAV = {
           //{ label: 'PFI Builder', href: '/order-management/customer-orders' },
           //{ label: 'Purchase Orders', href: '/admin/purchase-orders' },
           { label: 'Suppliers', href: '/admin/suppliers' },
+          { label: 'Import Suppliers', href: '/admin/suppliers/import' },
           { label: 'Suppliers Performance', href: '/admin/suppliers-performance' },
         ],
       },
@@ -129,6 +151,13 @@ const NAV = {
   management: {
     sections: [
       {
+        title: 'Analytics',
+        items: [
+          { label: 'Executive Dashboard', href: '/management/analytics' },
+          { label: 'Import History', href: '/management/analytics/import' },
+        ],
+      },
+      {
         title: 'Dashboard',
         items: [
           { label: 'Overview', href: '/admin/dashboard' },
@@ -153,6 +182,7 @@ const NAV = {
           //{ label: 'PFI Builder', href: '/order-management/customer-orders' },
           //{ label: 'Purchase Orders', href: '/admin/purchase-orders' },
           { label: 'Suppliers', href: '/admin/suppliers' },
+          { label: 'Import Suppliers', href: '/admin/suppliers/import' },
           { label: 'Suppliers Performance', href: '/admin/suppliers-performance' },
         ],
       },
@@ -184,12 +214,34 @@ export default function Sidebar({ role, userName }) {
     orderManagement: true,
   })
 
+  // The menu must follow WHO is signed in, not which folder the page lives in.
+  // Otherwise a management user opening an /admin page gets the admin menu and
+  // loses the way back to their own screens. The prop is only a fallback.
+  const [account, setAccount] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    const loadAccount = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (active && profile) setAccount(profile)
+    }
+    loadAccount()
+    return () => { active = false }
+  }, [])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
-  const portal = NAV[role] || { sections: [] }
+  const portal = NAV[account?.role || role] || { sections: [] }
+  const displayName = account?.full_name || userName
 
   return (
     <div className="w-56 bg-white border-r border-gray-200 flex flex-col p-4 fixed h-full">
@@ -198,6 +250,9 @@ export default function Sidebar({ role, userName }) {
         <span className="font-semibold text-sm">DMC Export</span>
       </div>
 
+      {/* Scrolls on its own so a long menu can never push the sign-out
+          control off the bottom of the screen. */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
       {portal.sections.map((section) => (
         <div key={section.title} className="mb-4">
           {section.title && (
@@ -279,11 +334,12 @@ export default function Sidebar({ role, userName }) {
           </nav>
         </div>
       ))}
+      </div>
 
-      <div className="mt-auto">
-        {userName && (
+      <div className="pt-3 border-t border-gray-100">
+        {displayName && (
           <p className="mb-2 text-xs uppercase text-gray-400">
-            Signed in — {userName}
+            Signed in — {displayName}
           </p>
         )}
 

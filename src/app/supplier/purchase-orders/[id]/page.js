@@ -56,7 +56,7 @@ export default function PODetailPage() {
   return (
     <div style={{ maxWidth: 860 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <Link href="/supplier/dashboard" className="btn btn-ghost btn-sm">Back to purchase orders</Link>
+        <Link href="/supplier/purchase-orders" className="btn btn-ghost btn-sm">Back to purchase orders</Link>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>

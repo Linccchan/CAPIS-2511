@@ -1,0 +1,120 @@
+Order Reference,Vendor,Buyer,Created on,Order Deadline,Activities,Source Document,Total,Status
+P000001,Puregold Supermarket,Michael Cartagena,01/13/2025,01/24/2025,,,80414,Purchase Order
+P000002,San Miguel Purefoods,Michael Cartagena,01/12/2025,02/17/2025,,,21000,Purchase Order
+P000003,Monde Nissin Corp.,Michael Cartagena,01/11/2025,02/11/2025,,,23683,Purchase Order
+P000004,Nestlé Philippines,Michael Cartagena,01/24/2025,02/26/2025,,,27213,Purchase Order
+P000005,San Miguel Purefoods,Michael Cartagena,01/24/2025,03/01/2025,,,44777,Purchase Order
+P000006,Universal Robina Corp.,Michael Cartagena,01/31/2025,03/15/2025,,,51217,Purchase Order
+P000007,M.Y. San Corp.,Michael Cartagena,01/29/2025,03/03/2025,,,76935,Purchase Order
+P000008,San Miguel Purefoods,Michael Cartagena,02/05/2025,03/13/2025,,,85819,Purchase Order
+P000009,Monde Nissin Corp.,Michael Cartagena,02/11/2025,03/14/2025,,,11849,Purchase Order
+P000010,Rebisco,Michael Cartagena,02/18/2025,03/25/2025,,,27029,Purchase Order
+P000011,M.Y. San Corp.,Michael Cartagena,02/21/2025,03/26/2025,,,43046,Purchase Order
+P000012,Monde Nissin Corp.,Michael Cartagena,03/04/2025,04/04/2025,,,80345,Purchase Order
+P000013,Universal Robina Corp.,Michael Cartagena,03/05/2025,04/17/2025,,,36790,Purchase Order
+P000014,San Miguel Purefoods,Michael Cartagena,03/07/2025,04/12/2025,,,44471,Purchase Order
+P000015,Century Pacific Group,Michael Cartagena,03/04/2025,04/11/2025,,,90059,Purchase Order
+P000016,Puregold Supermarket,Michael Cartagena,03/24/2025,04/04/2025,,,29959,Purchase Order
+P000017,Puregold Supermarket,Michael Cartagena,03/17/2025,03/28/2025,,,64198,Purchase Order
+P000018,Rebisco,Michael Cartagena,04/11/2025,05/16/2025,,,34062,Purchase Order
+P000019,Rebisco,Michael Cartagena,04/06/2025,05/11/2025,,,85774,Purchase Order
+P000020,M.Y. San Corp.,Michael Cartagena,04/14/2025,05/17/2025,,,40133,Purchase Order
+P000021,Century Pacific Group,Michael Cartagena,04/21/2025,05/29/2025,,,60204,Purchase Order
+P000022,Century Pacific Group,Michael Cartagena,04/22/2025,05/30/2025,,,46905,Purchase Order
+P000023,Monde Nissin Corp.,Michael Cartagena,05/01/2025,06/01/2025,,,90510,Purchase Order
+P000024,Rebisco,Michael Cartagena,04/28/2025,06/02/2025,,,63171,Purchase Order
+P000025,Nestlé Philippines,Michael Cartagena,05/20/2025,06/22/2025,,,87789,Purchase Order
+P000026,Rebisco,Michael Cartagena,05/17/2025,06/21/2025,,,42677,Purchase Order
+P000027,M.Y. San Corp.,Michael Cartagena,06/04/2025,07/07/2025,,,16767,Purchase Order
+P000028,San Miguel Purefoods,Michael Cartagena,06/03/2025,07/09/2025,,,40983,Purchase Order
+P000029,Nestlé Philippines,Michael Cartagena,06/05/2025,07/08/2025,,,48401,Purchase Order
+P000030,Universal Robina Corp.,Michael Cartagena,06/13/2025,07/26/2025,,,48145,Purchase Order
+P000031,Monde Nissin Corp.,Michael Cartagena,06/14/2025,07/15/2025,,,56489,Purchase Order
+P000032,M.Y. San Corp.,Michael Cartagena,06/10/2025,07/13/2025,,,65279,Purchase Order
+P000033,M.Y. San Corp.,Michael Cartagena,06/16/2025,07/19/2025,,,75503,Purchase Order
+P000034,Monde Nissin Corp.,Michael Cartagena,06/25/2025,07/26/2025,,,69144,Purchase Order
+P000035,Rebisco,Michael Cartagena,06/30/2025,08/04/2025,,,53601,Purchase Order
+P000036,Rebisco,Michael Cartagena,07/09/2025,08/13/2025,,,57591,Purchase Order
+P000037,Monde Nissin Corp.,Michael Cartagena,07/09/2025,08/09/2025,,,18314,Purchase Order
+P000038,Nestlé Philippines,Michael Cartagena,07/14/2025,08/16/2025,,,4077,Purchase Order
+P000039,Monde Nissin Corp.,Michael Cartagena,07/18/2025,08/18/2025,,,35941,Purchase Order
+P000040,Puregold Supermarket,Michael Cartagena,07/23/2025,08/03/2025,,,78446,Purchase Order
+P000041,Puregold Supermarket,Michael Cartagena,08/01/2025,08/12/2025,,,79072,Purchase Order
+P000042,Universal Robina Corp.,Michael Cartagena,08/06/2025,09/18/2025,,,77036,Purchase Order
+P000043,Century Pacific Group,Michael Cartagena,08/09/2025,09/16/2025,,,13462,Purchase Order
+P000044,Rebisco,Michael Cartagena,08/10/2025,09/14/2025,,,61303,Purchase Order
+P000045,M.Y. San Corp.,Michael Cartagena,08/15/2025,09/17/2025,,,36496,Purchase Order
+P000046,San Miguel Purefoods,Michael Cartagena,08/23/2025,09/28/2025,,,62332,Purchase Order
+P000047,Nestlé Philippines,Michael Cartagena,08/26/2025,09/28/2025,,,45578,Purchase Order
+P000048,Rebisco,Michael Cartagena,08/23/2025,09/27/2025,,,80311,Purchase Order
+P000049,Puregold Supermarket,Michael Cartagena,08/25/2025,09/05/2025,,,32122,Purchase Order
+P000050,Century Pacific Group,Michael Cartagena,09/09/2025,10/17/2025,,,27972,Purchase Order
+P000051,Century Pacific Group,Michael Cartagena,09/06/2025,10/14/2025,,,50002,Purchase Order
+P000052,Rebisco,Michael Cartagena,09/10/2025,10/15/2025,,,68005,Purchase Order
+P000053,Nestlé Philippines,Michael Cartagena,09/15/2025,10/18/2025,,,44166,Purchase Order
+P000054,M.Y. San Corp.,Michael Cartagena,09/22/2025,10/25/2025,,,78402,Purchase Order
+P000055,Universal Robina Corp.,Michael Cartagena,09/17/2025,10/30/2025,,,36825,Purchase Order
+P000056,Nestlé Philippines,Michael Cartagena,09/22/2025,10/25/2025,,,38993,Purchase Order
+P000057,Rebisco,Michael Cartagena,10/01/2025,11/05/2025,,,72131,Purchase Order
+P000058,M.Y. San Corp.,Michael Cartagena,10/08/2025,11/10/2025,,,85498,Purchase Order
+P000059,Nestlé Philippines,Michael Cartagena,10/16/2025,11/18/2025,,,30344,Purchase Order
+P000060,Puregold Supermarket,Michael Cartagena,10/14/2025,10/25/2025,,,6526,Purchase Order
+P000061,Rebisco,Michael Cartagena,10/31/2025,12/05/2025,,,33955,Purchase Order
+P000062,San Miguel Purefoods,Michael Cartagena,10/31/2025,12/06/2025,,,91401,Purchase Order
+P000063,Rebisco,Michael Cartagena,10/27/2025,12/01/2025,,,3878,Purchase Order
+P000064,Puregold Supermarket,Michael Cartagena,11/16/2025,11/27/2025,,,35949,Purchase Order
+P000065,Puregold Supermarket,Michael Cartagena,11/19/2025,11/30/2025,,,83052,Purchase Order
+P000066,San Miguel Purefoods,Michael Cartagena,11/16/2025,12/22/2025,,,85744,Purchase Order
+P000067,Rebisco,Michael Cartagena,12/01/2025,01/05/2026,,,81081,Purchase Order
+P000068,Nestlé Philippines,Michael Cartagena,11/24/2025,12/27/2025,,,30879,Purchase Order
+P000069,Nestlé Philippines,Michael Cartagena,11/28/2025,12/31/2025,,,69645,Purchase Order
+P000070,Nestlé Philippines,Michael Cartagena,12/17/2025,01/19/2026,,,47793,Purchase Order
+P000071,Nestlé Philippines,Michael Cartagena,12/11/2025,01/13/2026,,,57158,Purchase Order
+P000072,M.Y. San Corp.,Michael Cartagena,12/15/2025,01/17/2026,,,52443,Purchase Order
+P000073,M.Y. San Corp.,Michael Cartagena,12/19/2025,01/21/2026,,,37617,Purchase Order
+P000074,Puregold Supermarket,Michael Cartagena,12/24/2025,01/04/2026,,,46195,Purchase Order
+P000075,Puregold Supermarket,Michael Cartagena,12/31/2025,01/11/2026,,,26392,Purchase Order
+P000076,Nestlé Philippines,Michael Cartagena,12/25/2025,01/27/2026,,,33226,Purchase Order
+P000077,Puregold Supermarket,Michael Cartagena,01/13/2026,01/24/2026,,,60329,Purchase Order
+P000078,Universal Robina Corp.,Michael Cartagena,01/07/2026,02/19/2026,,,45562,Purchase Order
+P000079,M.Y. San Corp.,Michael Cartagena,01/09/2026,02/11/2026,,,37419,Purchase Order
+P000080,Monde Nissin Corp.,Michael Cartagena,01/12/2026,02/12/2026,,,41885,Purchase Order
+P000081,Puregold Supermarket,Michael Cartagena,01/29/2026,02/09/2026,,,40847,Purchase Order
+P000082,San Miguel Purefoods,Michael Cartagena,01/29/2026,03/06/2026,,,32496,Purchase Order
+P000083,Universal Robina Corp.,Michael Cartagena,01/19/2026,03/03/2026,,,90415,Purchase Order
+P000084,Nestlé Philippines,Michael Cartagena,02/12/2026,03/17/2026,,,61710,Purchase Order
+P000085,Monde Nissin Corp.,Michael Cartagena,02/07/2026,03/10/2026,,,62079,Purchase Order
+P000086,Nestlé Philippines,Michael Cartagena,02/02/2026,03/07/2026,,,85045,Purchase Order
+P000087,Century Pacific Group,Michael Cartagena,02/16/2026,03/26/2026,,,80881,Purchase Order
+P000088,Puregold Supermarket,Michael Cartagena,02/22/2026,03/05/2026,,,25976,Purchase Order
+P000089,Puregold Supermarket,Michael Cartagena,02/27/2026,03/10/2026,,,82200,Purchase Order
+P000090,Universal Robina Corp.,Michael Cartagena,02/25/2026,04/09/2026,,,74159,Purchase Order
+P000091,Rebisco,Michael Cartagena,03/08/2026,04/12/2026,,,41017,Purchase Order
+P000092,Monde Nissin Corp.,Michael Cartagena,03/09/2026,04/09/2026,,,78166,Purchase Order
+P000093,Nestlé Philippines,Michael Cartagena,03/02/2026,04/04/2026,,,37256,Purchase Order
+P000094,San Miguel Purefoods,Michael Cartagena,03/10/2026,04/15/2026,,,57437,Purchase Order
+P000095,Monde Nissin Corp.,Michael Cartagena,03/19/2026,04/19/2026,,,91121,Purchase Order
+P000096,Rebisco,Michael Cartagena,03/21/2026,04/25/2026,,,69225,Purchase Order
+P000097,M.Y. San Corp.,Michael Cartagena,03/18/2026,04/20/2026,,,64736,Purchase Order
+P000098,Century Pacific Group,Michael Cartagena,04/07/2026,05/15/2026,,,52549,Purchase Order
+P000099,Puregold Supermarket,Michael Cartagena,04/05/2026,04/16/2026,,,12891,Purchase Order
+P000100,M.Y. San Corp.,Michael Cartagena,04/07/2026,05/10/2026,,,30061,Purchase Order
+P000101,Puregold Supermarket,Michael Cartagena,04/20/2026,05/01/2026,,,6631,Purchase Order
+P000102,Rebisco,Michael Cartagena,04/17/2026,05/22/2026,,,31813,Purchase Order
+P000103,Nestlé Philippines,Michael Cartagena,04/17/2026,05/20/2026,,,10303,Purchase Order
+P000104,Universal Robina Corp.,Michael Cartagena,04/24/2026,06/06/2026,,,34784,Purchase Order
+P000105,Puregold Supermarket,Michael Cartagena,05/02/2026,05/13/2026,,,17067,Purchase Order
+P000106,Rebisco,Michael Cartagena,04/29/2026,06/03/2026,,,12246,Purchase Order
+P000107,M.Y. San Corp.,Michael Cartagena,05/03/2026,06/05/2026,,,79377,Purchase Order
+P000108,Monde Nissin Corp.,Michael Cartagena,05/02/2026,06/02/2026,,,12023,Purchase Order
+P000109,Puregold Supermarket,Michael Cartagena,05/13/2026,05/24/2026,,,9562,Purchase Order
+P000110,Nestlé Philippines,Michael Cartagena,05/21/2026,06/23/2026,,,42846,Purchase Order
+P000111,M.Y. San Corp.,Michael Cartagena,05/20/2026,06/22/2026,,,51768,Purchase Order
+P000112,Puregold Supermarket,Michael Cartagena,05/31/2026,06/11/2026,,,23194,Purchase Order
+P000113,Nestlé Philippines,Michael Cartagena,06/05/2026,07/08/2026,,,25815,Purchase Order
+P000114,Puregold Supermarket,Michael Cartagena,06/11/2026,06/22/2026,,,62250,Purchase Order
+P000115,Universal Robina Corp.,Michael Cartagena,06/10/2026,07/23/2026,,,91795,Purchase Order
+P000116,Nestlé Philippines,Michael Cartagena,06/18/2026,07/21/2026,,,42542,Purchase Order
+P000117,M.Y. San Corp.,Michael Cartagena,06/27/2026,07/30/2026,,,28417,Purchase Order
+P000118,Puregold Supermarket,Michael Cartagena,06/29/2026,07/10/2026,,,31812,Purchase Order
+P000119,Monde Nissin Corp.,Michael Cartagena,06/24/2026,07/25/2026,,,53270,Purchase Order
