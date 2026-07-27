@@ -111,6 +111,10 @@ export default function PurchaseOrdersPage() {
       expected_delivery_date: po.expectedDelivery ? String(po.expectedDelivery).slice(0, 10) : '',
       status: po.status,
     })
+    // The form sits below the table — bring it into view so Edit visibly responds
+    requestAnimationFrame(() => {
+      document.getElementById('po-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
   }
 
   const resetForm = () => {
@@ -308,7 +312,8 @@ const save = async (event) => {
           )}
         </Card>
 
-        <Card title={editing ? 'Edit Purchase Order' : 'New Purchase Order'}>
+        <div id="po-form" className="scroll-mt-6">
+        <Card title={editing ? `Edit Purchase Order — ${editing.poNumber || ''}` : 'New Purchase Order'}>
           <form onSubmit={save} className="space-y-4">
             <label className="block text-sm font-medium text-gray-700">Customer Order
               <select value={form.order_id} onChange={(event) => setForm({ ...form, order_id: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
@@ -361,6 +366,7 @@ const save = async (event) => {
             </div>
           </form>
         </Card>
+        </div>
       </div>
       <ConfirmDialog open={Boolean(deleteTarget)} title="Delete purchase order?" message="This removes the selected purchase order record. This action cannot be undone." loading={deleting} onCancel={() => setDeleteTarget(null)} onConfirm={remove} />
     </OrderShell>
