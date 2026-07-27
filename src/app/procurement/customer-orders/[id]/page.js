@@ -90,7 +90,7 @@ export default function CustomerOrderDetailsPage() {
   return (
     <OrderShell title="Order Details" description="Customer information, ordered products, supplier progress, and shipment readiness.">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Link href="/order-management/customer-orders" className="text-sm font-medium text-gray-700 hover:underline">Back to customer orders</Link>
+        <Link href="/procurement/customer-orders" className="text-sm font-medium text-gray-700 hover:underline">Back to customer orders</Link>
         {order && String(order.status || '').toLowerCase() === 'submitted' && (
           <Link href={`/order-management/customer-orders/${order.id}/pfi`} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
             {order.billing ? 'Update PFI' : 'Build PFI'}

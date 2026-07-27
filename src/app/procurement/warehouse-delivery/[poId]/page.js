@@ -99,13 +99,13 @@ export default function LogDeliveryPage() {
                 message: allDelivered ? 'All items confirmed by warehouse.' : 'Some items missing or short — review.',
             });
         }
-        router.push('/warehouse/dashboard');
+        router.push('/procurement/warehouse-delivery');
     }
     if (!po)
         return <div style={{ padding: 24, color: 'var(--text-tertiary)' }}>Loading…</div>;
     if (!delivery)
         return (<div>
-      <Link href="/warehouse/dashboard" className="btn btn-ghost btn-sm" style={{ marginBottom: 16, display: 'inline-flex' }}>← Dashboard</Link>
+      <Link href="/procurement/warehouse-delivery" className="btn btn-ghost btn-sm" style={{ marginBottom: 16, display: 'inline-flex' }}>← Warehouse deliveries</Link>
       <div className="card card-pad" style={{ maxWidth: 480 }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>No pending dispatch found for this PO. The supplier may not have logged a dispatch yet.</p>
       </div>
@@ -113,7 +113,7 @@ export default function LogDeliveryPage() {
     const order = po.customer_orders;
     return (<div style={{ maxWidth: 900 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <Link href="/warehouse/dashboard" className="btn btn-ghost btn-sm">← Dashboard</Link>
+        <Link href="/procurement/warehouse-delivery" className="btn btn-ghost btn-sm">← Warehouse deliveries</Link>
       </div>
 
       <div style={{ marginBottom: 20 }}>

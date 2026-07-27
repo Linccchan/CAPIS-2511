@@ -141,7 +141,7 @@ export default function PfiBuilderPage() {
   return (
     <OrderShell title="PFI Builder" description="Set quotation prices and prepare the customer pro forma invoice.">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Link href={`/order-management/customer-orders/${params.id}`} className="text-sm font-medium text-gray-700 hover:underline">Back to order details</Link>
+        <Link href={`/procurement/customer-orders/${params.id}`} className="text-sm font-medium text-gray-700 hover:underline">Back to order details</Link>
         {order?.billing && <Badge tone="black">{order.billing.billing_number}</Badge>}
       </div>
 
