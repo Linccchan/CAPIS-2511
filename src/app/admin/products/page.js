@@ -3,6 +3,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
+function productImagePath(imageUrl) {
+  if (!imageUrl) return null;
+
+  try {
+    const marker = '/storage/v1/object/public/product-images/';
+    const pathname = new URL(imageUrl).pathname;
+    const markerIndex = pathname.indexOf(marker);
+
+    return markerIndex === -1
+      ? null
+      : decodeURIComponent(pathname.slice(markerIndex + marker.length));
+  } catch {
+    return null;
+  }
+}
+
 export default function ProductsPage() {
   const supabase = useMemo(() => createClient(), []);
 
@@ -14,6 +30,7 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
 
   const blankProduct = {
     product_name: '',
@@ -24,6 +41,7 @@ export default function ProductsPage() {
     unit_weight_kg: '',
     unit_cbm: '',
     is_available: true,
+    image_url: '',
   };
 
   const [form, setForm] = useState(blankProduct);
@@ -68,6 +86,48 @@ export default function ProductsPage() {
 
     let error;
     let data;
+    let uploadedPath = null;
+    let imageUrl = form.image_url || null;
+
+    if (imageFile) {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(imageFile.type)) {
+            alert('Please select a JPEG, PNG, or WebP image.');
+            setSaving(false);
+            return;
+        }
+
+        if (imageFile.size > 5 * 1024 * 1024) {
+            alert('The product image must be 5 MB or smaller.');
+            setSaving(false);
+            return;
+        }
+
+        const extensionByType = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/webp': 'webp',
+        };
+        uploadedPath = `${crypto.randomUUID()}.${extensionByType[imageFile.type]}`;
+
+        const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(uploadedPath, imageFile, {
+            cacheControl: '3600',
+            upsert: false,
+        });
+
+        if (uploadError) {
+            alert(`Image upload failed: ${uploadError.message}`);
+            setSaving(false);
+            return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(uploadedPath);
+
+        imageUrl = publicUrlData.publicUrl;
+    }
 
     if (editing) {
         ({ data, error } = await supabase
@@ -81,6 +141,7 @@ export default function ProductsPage() {
             unit_weight_kg: form.unit_weight_kg || null,
             unit_cbm: form.unit_cbm || null,
             is_available: form.is_available,
+            image_url: imageUrl,
         })
         .eq('id', selectedId)
         .select()
@@ -92,6 +153,7 @@ export default function ProductsPage() {
             ...form,
             unit_weight_kg: form.unit_weight_kg || null,
             unit_cbm: form.unit_cbm || null,
+            image_url: imageUrl,
         })
         .select()
         .single());
@@ -100,8 +162,22 @@ export default function ProductsPage() {
     setSaving(false);
 
     if (error) {
+        if (uploadedPath) {
+            await supabase.storage.from('product-images').remove([uploadedPath]);
+        }
         alert(error.message);
         return;
+    }
+
+    if (editing && uploadedPath) {
+        const previousPath = productImagePath(form.image_url);
+        if (previousPath) {
+            const { error: cleanupError } = await supabase.storage
+            .from('product-images')
+            .remove([previousPath]);
+
+            if (cleanupError) console.error('Could not remove the previous product image:', cleanupError);
+        }
     }
 
     if (editing) {
@@ -115,6 +191,7 @@ export default function ProductsPage() {
     setEditing(false);
     setSelectedId(null);
     setForm(blankProduct);
+    setImageFile(null);
     setShowModal(false);
 
     alert(editing ? 'Product updated!' : 'Product created!');
@@ -133,8 +210,10 @@ export default function ProductsPage() {
         unit_weight_kg: product.unit_weight_kg ?? '',
         unit_cbm: product.unit_cbm ?? '',
         is_available: product.is_available,
+        image_url: product.image_url || '',
     });
 
+    setImageFile(null);
     setShowModal(true);
   }
 
@@ -153,6 +232,16 @@ export default function ProductsPage() {
     if (error) {
         alert(error.message);
         return;
+    }
+
+    const deletedProduct = products.find(product => product.id === id);
+    const deletedImagePath = productImagePath(deletedProduct?.image_url);
+    if (deletedImagePath) {
+        const { error: imageDeleteError } = await supabase.storage
+        .from('product-images')
+        .remove([deletedImagePath]);
+
+        if (imageDeleteError) console.error('Could not remove the product image:', imageDeleteError);
     }
 
     setProducts(prev =>
@@ -229,6 +318,7 @@ export default function ProductsPage() {
         >
         <thead>
             <tr>
+                <th className="table-th">Image</th>
                 <th className="table-th">Product</th>
                 <th className="table-th">SKU</th>
                 <th className="table-th">Category</th>
@@ -245,13 +335,31 @@ export default function ProductsPage() {
 <tbody>
   {loading ? (
     <tr>
-      <td colSpan={10} className="table-td" style={{ textAlign: 'center', padding: 32 }}>
+      <td colSpan={11} className="table-td" style={{ textAlign: 'center', padding: 32 }}>
         Loading products...
       </td>
     </tr>
   ) : filteredProducts.length ? (
     filteredProducts.map(product => (
       <tr key={product.id}>
+        <td className="table-td">
+          <div className="h-12 w-12 overflow-hidden rounded border border-gray-200 bg-gray-50">
+            {product.image_url ? (
+              // The bucket hostname is configured at runtime, so a native image is intentional.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={product.image_url}
+                alt=""
+                className="h-full w-full object-contain"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
+                No image
+              </div>
+            )}
+          </div>
+        </td>
         <td className="table-td">
           <div className="td-primary">{product.product_name}</div>
 
@@ -326,7 +434,7 @@ export default function ProductsPage() {
   ) : (
     <tr>
       <td
-        colSpan={10}
+        colSpan={11}
         className="table-td"
         style={{
           textAlign: 'center',
@@ -436,6 +544,44 @@ export default function ProductsPage() {
   }
 />
 
+<div>
+  <label
+    htmlFor="product-image"
+    style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}
+  >
+    Product image
+  </label>
+  <input
+    id="product-image"
+    className="input"
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+  />
+  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 5 }}>
+    JPEG, PNG, or WebP. Maximum 5 MB.
+  </div>
+  {editing && form.image_url && !imageFile && (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+      {/* The bucket hostname is configured at runtime, so a native image is intentional. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={form.image_url}
+        alt="Current product"
+        style={{ width: 56, height: 56, objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: 6 }}
+      />
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+        Select a new file to replace this image.
+      </span>
+    </div>
+  )}
+  {imageFile && (
+    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>
+      Selected: {imageFile.name}
+    </div>
+  )}
+</div>
+
 <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
   <input
     type="checkbox"
@@ -467,6 +613,7 @@ export default function ProductsPage() {
                 setEditing(false);
                 setSelectedId(null);
                 setForm(blankProduct);
+                setImageFile(null);
             }}
           >
             Cancel

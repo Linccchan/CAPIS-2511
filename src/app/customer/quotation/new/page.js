@@ -21,6 +21,7 @@ export default function RequestQuotation() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [newOrderId, setNewOrderId] = useState(null)
+  const [newOrderNumber, setNewOrderNumber] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -189,6 +190,7 @@ export default function RequestQuotation() {
 
     sessionStorage.removeItem(STORAGE_KEY)
     setNewOrderId(order.id)
+    setNewOrderNumber(order.order_number)
     setSubmitted(true)
     setSubmitting(false)
   }
@@ -204,13 +206,29 @@ export default function RequestQuotation() {
       <div className="bg-white rounded-lg border border-gray-200 p-10 text-center max-w-md">
         <div className="text-4xl mb-4">✓</div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">Quotation request submitted</h2>
-        <p className="text-sm text-gray-500 mb-6">DMC will review your request and prepare a pro forma invoice. You will be notified once it is ready.</p>
-        <button
-          onClick={() => router.push('/customer/dashboard')}
-          className="bg-black text-white px-6 py-2 rounded text-sm hover:bg-gray-800"
-        >
-          Back to dashboard
-        </button>
+        <p className="text-sm text-gray-500 mb-4">DMC will review your request and prepare a pro forma invoice. You will be notified once it is ready.</p>
+        {newOrderNumber && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-6">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Quotation reference</p>
+            <p className="text-lg font-bold text-gray-900">{newOrderNumber}</p>
+          </div>
+        )}
+        <div className="flex justify-center gap-3">
+          {newOrderId && (
+            <button
+              onClick={() => router.push(`/customer/quotation/${newOrderId}`)}
+              className="bg-black text-white px-5 py-2 rounded text-sm hover:bg-gray-800"
+            >
+              View request
+            </button>
+          )}
+          <button
+            onClick={() => router.push('/customer/dashboard')}
+            className="border border-gray-300 text-gray-700 px-5 py-2 rounded text-sm hover:bg-gray-50"
+          >
+            Back to dashboard
+          </button>
+        </div>
       </div>
     </div>
   )
