@@ -27,12 +27,12 @@ export default function StagingPage() {
           .eq('status', 'Staging')
           .order('actual_completed_date', { ascending: false }),
 
-        // Only free, active slots — assigning an occupied one would silently
-        // steal it from the purchase order already stored there.
+        // Active slots with their occupancy. A slot is offered if it is free,
+        // or if it already holds this same purchase order (goods were received
+        // into it, so staging them there is expected) — see availableFor().
         supabase
           .from('warehouse_locations')
-          .select('id, location_code')
-          .eq('occupied', false)
+          .select('id, location_code, occupied, purchase_order_id')
           .eq('is_active', true)
           .order('location_code'),
 
@@ -61,6 +61,10 @@ export default function StagingPage() {
   useEffect(() => {
     load()
   }, [])
+
+  // Free slots, plus the slot this purchase order is already stored in.
+  const availableFor = (poId) =>
+    warehouseLocations.filter((l) => !l.occupied || l.purchase_order_id === poId)
 
   const displayed = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -266,12 +270,13 @@ async function confirmStaging(poId) {
                 >
                   <option value="">Select location</option>
 
-                  {warehouseLocations.map(location => (
+                  {availableFor(po.id).map(location => (
                     <option
                       key={location.id}
                       value={location.id}
                     >
                       {location.location_code}
+                      {location.purchase_order_id === po.id ? ' · already stored here' : ''}
                     </option>
                   ))}
                 </select>

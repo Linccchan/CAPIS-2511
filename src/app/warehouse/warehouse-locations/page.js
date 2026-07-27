@@ -197,7 +197,10 @@ export default function WarehouseLocationsPage() {
             </div>
 
 
-            {location.purchase_order_id && (
+            {/* Show for any occupied slot, not only ones with a linked PO —
+                otherwise a slot marked occupied without a reference can never
+                be released from this screen. */}
+            {(location.purchase_order_id || location.occupied) && (
             <div
                 style={{
                 marginTop: 0,
@@ -225,7 +228,8 @@ export default function WarehouseLocationsPage() {
                     marginBottom: 2,
                 }}
                 >
-                {location.purchase_orders?.po_number || 'Unknown PO'}
+                {location.purchase_orders?.po_number
+                  || (location.purchase_order_id ? 'Unknown PO' : 'No purchase order linked')}
                 </div>
 
                 <div

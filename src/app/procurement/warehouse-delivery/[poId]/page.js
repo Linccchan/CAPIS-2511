@@ -90,7 +90,7 @@ export default function LogDeliveryPage() {
                 // locations screen still advertises this slot as empty.
                 if (item.location_id) {
                     await supabase.from('warehouse_locations')
-                        .update({ occupied: true })
+                        .update({ occupied: true, purchase_order_id: params.poId })
                         .eq('id', item.location_id);
                 }
             }
