@@ -10,7 +10,9 @@ const blankForm = {
   supplier_id: '',
   po_number: '',
   expected_delivery_date: '',
-  status: 'Pending',
+  // 'sent' is the status the supplier portal acts on — a PO is emailed to the
+  // supplier on creation, so it is sent by definition.
+  status: 'sent',
 }
 
 export default function PurchaseOrdersPage() {
@@ -197,8 +199,12 @@ const save = async (event) => {
           : 'Purchase order updated.'
       )
     } else {
-      // Create Purchase Order
-      result = await createRecord('purchase_orders', payload)
+      // Stamp the issue date — supplier lead time (Module 4) is measured from
+      // issued_date to actual_completed_date, so it must never be blank.
+      result = await createRecord('purchase_orders', {
+        ...payload,
+        issued_date: payload.issued_date || new Date().toISOString().split('T')[0],
+      })
 
       // Only the products chosen for THIS supplier — an order is split across
       // several suppliers, so a PO must not carry the whole order's items.
@@ -428,9 +434,11 @@ const save = async (event) => {
             </label>
             <label className="block text-sm font-medium text-gray-700">Status
               <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400">
-                <option value="Pending">Pending</option>
+                <option value="draft">Draft</option>
+                <option value="sent">Sent</option>
                 <option value="partially_delivered">Partially Delivered</option>
                 <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </label>
             <div className="flex gap-2">
