@@ -5,6 +5,16 @@ import { supabase } from '@/lib/supabaseClient'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useRouter } from 'next/navigation'
 
+// A purchase order counts as fully received once the goods are physically in,
+// whatever downstream warehouse stage it has reached.
+const RECEIVED_STATUSES = [
+  'delivered',
+  'pending sticker / label',
+  'staging',
+  'ready for shipment',
+  'ready_for_shipment',
+]
+
 export default function LogDeliveryPage() {
   const router = useRouter()
 
@@ -115,14 +125,37 @@ async function handleConfirmReceipt() {
 
     if (poError) throw poError
 
+    // Goods are in — move the customer's tracker on. Without this the order
+    // would stay at "partially received" even once every supplier delivered.
+    if (selectedPO.order_id) {
+      const { data: orderPOs } = await supabase
+        .from('purchase_orders')
+        .select('status')
+        .eq('order_id', selectedPO.order_id)
+
+      const allReceived = (orderPOs ?? []).every((po) =>
+        RECEIVED_STATUSES.includes(String(po.status).toLowerCase()),
+      )
+
+      await supabase
+        .from('customer_orders')
+        .update({ status: allReceived ? 'warehouse_preparation' : 'partially_received' })
+        .eq('id', selectedPO.order_id)
+        .in('status', ['payment_verified', 'procurement_started', 'partially_received'])
+    }
+
     // Close modal
     setShowReceiveModal(false)
     setSelectedPO(null)
     setItems([])
 
-    // Remove it from the current table since it's no longer "delivered"
+    // Keep the row visible with its new status — it still belongs in this list.
     setPurchaseOrders(prev =>
-      prev.filter(po => po.id !== selectedPO.id)
+      prev.map(po =>
+        po.id === selectedPO.id
+          ? { ...po, status: 'Pending Sticker / Label' }
+          : po
+      )
     )
 
     alert('Delivery received successfully.')
