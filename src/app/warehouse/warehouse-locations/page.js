@@ -11,9 +11,11 @@ export default function WarehouseLocationsPage() {
     let active = true
 
     async function load() {
+      // Join the purchase order so the card can show its PO number and
+      // supplier instead of an unreadable database id.
       const { data, error } = await supabase
         .from('warehouse_locations')
-        .select('*')
+        .select('*, purchase_orders(po_number, suppliers(supplier_name), customer_orders(order_number))')
         .order('location_code')
 
       if (error) {
@@ -39,7 +41,9 @@ export default function WarehouseLocationsPage() {
     return locations.filter(
       (location) =>
         location.location_code?.toLowerCase().includes(q) ||
-        location.description?.toLowerCase().includes(q)
+        location.description?.toLowerCase().includes(q) ||
+        location.purchase_orders?.po_number?.toLowerCase().includes(q) ||
+        location.purchase_orders?.suppliers?.supplier_name?.toLowerCase().includes(q)
     )
   }, [locations, search])
 
@@ -63,6 +67,7 @@ export default function WarehouseLocationsPage() {
             ? {
                 ...location,
                 purchase_order_id: null,
+                purchase_orders: null,
                 occupied: false,
             }
             : location
@@ -199,13 +204,25 @@ export default function WarehouseLocationsPage() {
 
                 <div
                 style={{
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                    wordBreak: 'break-all',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    marginBottom: 2,
+                }}
+                >
+                {location.purchase_orders?.po_number || 'Unknown PO'}
+                </div>
+
+                <div
+                style={{
+                    fontSize: 11,
+                    opacity: .8,
                     marginBottom: 10,
                 }}
                 >
-                {location.purchase_order_id}
+                {[
+                  location.purchase_orders?.suppliers?.supplier_name,
+                  location.purchase_orders?.customer_orders?.order_number,
+                ].filter(Boolean).join(' · ') || '—'}
                 </div>
 
                 <button
