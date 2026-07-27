@@ -103,9 +103,10 @@ export default function RequestQuotation() {
     syncStorage(next)
   }
 
-  const updateQuantity = (product_id, qty) => {
+  const updateQuantity = (product_id, value) => {
+    const quantity = value === '' ? '' : Math.max(1, parseInt(value, 10) || 1)
     setSelectedItems(selectedItems.map(i =>
-      i.product_id === product_id ? { ...i, quantity_ordered: qty } : i
+      i.product_id === product_id ? { ...i, quantity_ordered: quantity } : i
     ))
   }
 
@@ -121,15 +122,19 @@ export default function RequestQuotation() {
     syncStorage(next)
   }
 
-  const totalCBM = selectedItems.reduce((sum, i) => sum + ((i.unit_cbm || 0) * i.quantity_ordered), 0)
-  const totalWeight = selectedItems.reduce((sum, i) => sum + ((i.unit_weight_kg || 0) * i.quantity_ordered), 0)
-  const totalQty = selectedItems.reduce((sum, i) => sum + i.quantity_ordered, 0)
+  const totalCBM = selectedItems.reduce((sum, i) => sum + ((i.unit_cbm || 0) * (Number(i.quantity_ordered) || 0)), 0)
+  const totalWeight = selectedItems.reduce((sum, i) => sum + ((i.unit_weight_kg || 0) * (Number(i.quantity_ordered) || 0)), 0)
+  const totalQty = selectedItems.reduce((sum, i) => sum + (Number(i.quantity_ordered) || 0), 0)
 
   const selectedLocation = locations.find((l) => l.id === selectedLocationId)
   const today = new Date().toISOString().split('T')[0]
 
   const handleSubmit = async () => {
     if (!customer || selectedItems.length === 0 || !selectedLocation) return
+    if (selectedItems.some((item) => !Number.isInteger(Number(item.quantity_ordered)) || Number(item.quantity_ordered) < 1)) {
+      alert('Each product quantity must be at least 1.')
+      return
+    }
     if (preferredDate && preferredDate < today) {
       alert('Preferred ship date cannot be in the past.')
       return
@@ -327,7 +332,11 @@ export default function RequestQuotation() {
                             type="number"
                             min="1"
                             value={item.quantity_ordered}
-                            onChange={(e) => updateQuantity(item.product_id, parseInt(e.target.value) || 1)}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => updateQuantity(item.product_id, e.target.value)}
+                            onBlur={() => {
+                              if (item.quantity_ordered === '') updateQuantity(item.product_id, '1')
+                            }}
                             className="w-20 border border-gray-300 rounded px-2 py-1 text-sm text-black"
                           />
                         </td>
