@@ -250,6 +250,9 @@ export default function Sidebar({ role, userName }) {
         <span className="font-semibold text-sm">DMC Export</span>
       </div>
 
+      {/* Scrolls on its own so a long menu can never push the sign-out
+          control off the bottom of the screen. */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
       {portal.sections.map((section) => (
         <div key={section.title} className="mb-4">
           {section.title && (
@@ -331,8 +334,9 @@ export default function Sidebar({ role, userName }) {
           </nav>
         </div>
       ))}
+      </div>
 
-      <div className="mt-auto">
+      <div className="pt-3 border-t border-gray-100">
         {displayName && (
           <p className="mb-2 text-xs uppercase text-gray-400">
             Signed in — {displayName}
