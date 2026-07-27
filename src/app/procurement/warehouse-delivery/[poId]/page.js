@@ -88,6 +88,18 @@ export default function LogDeliveryPage() {
             status: allDelivered ? 'delivered' : 'partially_delivered',
             ...(allDelivered ? { actual_completed_date: new Date().toISOString().split('T')[0] } : {}),
         }).eq('id', params.poId);
+        // Move the customer tracker: still waiting on other suppliers, or all
+        // goods in and warehouse preparation (stickering/staging) can begin.
+        const orderId = po.customer_orders?.id;
+        if (orderId) {
+            const { data: orderPOs } = await supabase.from('purchase_orders')
+                .select('status').eq('order_id', orderId);
+            const allPOsDelivered = (orderPOs ?? []).every(p => String(p.status).toLowerCase() === 'delivered');
+            await supabase.from('customer_orders')
+                .update({ status: allPOsDelivered ? 'warehouse_preparation' : 'partially_received' })
+                .eq('id', orderId)
+                .in('status', ['payment_verified', 'procurement_started', 'partially_received']);
+        }
         // Notify admin
         const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
         for (const a of admins ?? []) {

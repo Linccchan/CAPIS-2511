@@ -130,6 +130,27 @@ async function confirmStaging(poId) {
     setMessage({ type: 'success', text: 'Staging confirmed — the purchase order is now ready for shipment.' })
   }
 
+  // Once every purchase order on the customer order is staged, the whole
+  // export order is ready for container loading — advance the customer tracker.
+  const staged = purchaseOrders.find((po) => po.id === poId)
+  const orderId = staged?.order_id
+  if (orderId) {
+    const { data: orderPOs } = await supabase
+      .from('purchase_orders')
+      .select('status')
+      .eq('order_id', orderId)
+    const allReady = (orderPOs ?? []).every((po) =>
+      READY_STATUSES.map((s) => s.toLowerCase()).includes(String(po.status).toLowerCase()),
+    )
+    if (allReady) {
+      await supabase
+        .from('customer_orders')
+        .update({ status: 'ready_for_shipment' })
+        .eq('id', orderId)
+        .in('status', ['partially_received', 'warehouse_preparation'])
+    }
+  }
+
   // Reload so the PO moves from the staging queue into the ready list and the
   // location drops out of the available slots.
   setSelectedLocations((prev) => {

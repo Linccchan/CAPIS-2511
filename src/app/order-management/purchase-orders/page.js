@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { createRecord, deleteRecord, fetchOrderManagementData, formatDate, updateRecord } from '@/lib/orderManagement'
+import { advanceCustomerOrderStatus, createRecord, deleteRecord, fetchOrderManagementData, formatDate, updateRecord } from '@/lib/orderManagement'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, OrderShell, ProgressBar, TableSkeleton, statusTone, useToast } from '@/components/order-management/ui'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -224,6 +224,9 @@ const save = async (event) => {
         await deleteRecord('purchase_orders', result.data.id).catch(() => {})
         throw poItemsError
       }
+
+      // Issuing a PO means procurement has started — move the customer tracker.
+      await advanceCustomerOrderStatus(form.order_id, 'procurement_started', ['payment_verified'])
 
       // Send email
       fetch('/api/send-po-email', {
