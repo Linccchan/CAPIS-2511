@@ -9,6 +9,8 @@ const READY_STATUSES = ['ready_for_shipment', 'Ready for Shipment', 'Ready For S
 export default function StagingPage() {
   const [purchaseOrders, setPurchaseOrders] = useState([])
   const [readyOrders, setReadyOrders] = useState([])
+  // Whole customer orders that are staged and awaiting container loading.
+  const [shippableOrders, setShippableOrders] = useState([])
   const [search, setSearch] = useState('')
   const [warehouseLocations, setWarehouseLocations] = useState([])
   const [selectedLocations, setSelectedLocations] = useState({})
@@ -53,9 +55,16 @@ export default function StagingPage() {
       return
     }
 
+    const { data: shippable } = await supabase
+      .from('customer_orders')
+      .select('id, order_number, destination_country, customers(company_name)')
+      .eq('status', 'ready_for_shipment')
+      .order('order_number')
+
     setPurchaseOrders(staging ?? [])
     setWarehouseLocations(locations ?? [])
     setReadyOrders(ready ?? [])
+    setShippableOrders(shippable ?? [])
   }
 
   useEffect(() => {
@@ -65,6 +74,43 @@ export default function StagingPage() {
   // Free slots, plus the slot this purchase order is already stored in.
   const availableFor = (poId) =>
     warehouseLocations.filter((l) => !l.occupied || l.purchase_order_id === poId)
+
+  // Container loading: the goods physically leave DMC. This records the
+  // shipment and closes the customer's tracker; the bill of lading it implies
+  // is what makes the remaining 50% payable (proposal §1.6.2).
+  async function markShipped(order) {
+    if (!order?.id) return
+    setMessage(null)
+
+    const { data: shipmentNumber } = await supabase.rpc('next_document_number', { p_prefix: 'SHP' })
+    const today = new Date().toISOString().split('T')[0]
+
+    const { error: shipmentError } = await supabase.from('shipments').insert({
+      order_id: order.id,
+      shipment_number: shipmentNumber,
+      actual_ship_date: today,
+      status: 'shipped',
+    })
+
+    if (shipmentError) {
+      setMessage({ type: 'error', text: `Could not record the shipment: ${shipmentError.message}` })
+      return
+    }
+
+    const { error: orderError } = await supabase
+      .from('customer_orders')
+      .update({ status: 'shipped', actual_ready_date: today })
+      .eq('id', order.id)
+      .eq('status', 'ready_for_shipment')
+
+    if (orderError) {
+      setMessage({ type: 'error', text: `Shipment recorded, but the order could not be updated: ${orderError.message}` })
+      return
+    }
+
+    setMessage({ type: 'success', text: `${order.order_number} shipped — ${shipmentNumber} recorded. The balance is now payable.` })
+    await load()
+  }
 
   const displayed = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -315,6 +361,45 @@ async function confirmStaging(poId) {
           </tbody>
         </table>
       </div>
+
+      {/* Container loading — the final step of the fulfilment chain */}
+      {shippableOrders.length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.3px', color: 'var(--text-primary)' }}>
+            Ready for container loading
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, marginBottom: 12 }}>
+            All purchase orders staged. Marking an order shipped records the shipment and makes the balance payable.
+          </div>
+
+          <div className="card">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th className="table-th">Order</th>
+                  <th className="table-th">Customer</th>
+                  <th className="table-th">Destination</th>
+                  <th className="table-th">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shippableOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td className="table-td"><span className="td-primary">{order.order_number}</span></td>
+                    <td className="table-td">{order.customers?.company_name || '—'}</td>
+                    <td className="table-td">{order.destination_country || '—'}</td>
+                    <td className="table-td">
+                      <button className="btn btn-sm btn-primary" onClick={() => markShipped(order)}>
+                        Mark as shipped
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Where confirmed items land — previously only a count on the dashboard */}
       <div style={{ marginTop: 28 }}>
