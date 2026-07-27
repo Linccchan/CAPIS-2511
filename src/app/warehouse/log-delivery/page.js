@@ -35,7 +35,10 @@ export default function LogDeliveryPage() {
             quantity_ordered
           )
         `)
-        .in('status', ['delivered', 'Pending Sticker / Label'])
+        // Partial deliveries are normal at DMC (suppliers deliver in tranches),
+        // so they must stay visible — otherwise the PO disappears from the
+        // warehouse's view and the remainder can never be received.
+        .in('status', ['delivered', 'partially_delivered', 'Partially Delivered', 'Pending Sticker / Label'])
         .order('actual_completed_date', { ascending: false })
 
       if (error) {
