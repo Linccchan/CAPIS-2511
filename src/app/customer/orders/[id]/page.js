@@ -233,7 +233,10 @@ export default function OrderDetail() {
             <span className={`px-3 py-1 rounded text-xs font-medium ${getStatusStyle(order.status)}`}>
               {formatStatus(order.status)}
             </span>
-            <button className="text-sm border border-gray-300 px-3 py-2 rounded hover:bg-gray-50">
+            <button
+              onClick={() => router.push(`/customer/pfi/${order.id}`)}
+              className="text-sm border border-gray-300 px-3 py-2 rounded hover:bg-gray-50"
+            >
               Download PFI
             </button>
           </div>

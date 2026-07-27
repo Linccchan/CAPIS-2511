@@ -283,7 +283,10 @@ export default function QuotationDetail() {
                   Pro forma invoice — {billing ? billing.billing_number : 'Pending'}
                 </h2>
                 {billing && (
-                  <button className="text-sm border border-gray-300 px-3 py-1 rounded hover:bg-gray-50">
+                  <button
+                    onClick={() => router.push(`/customer/pfi/${order.id}`)}
+                    className="text-sm border border-gray-300 px-3 py-1 rounded hover:bg-gray-50"
+                  >
                     Download PDF
                   </button>
                 )}
