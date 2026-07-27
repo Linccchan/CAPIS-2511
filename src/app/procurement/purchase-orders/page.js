@@ -23,6 +23,11 @@ export default function PurchaseOrdersPage() {
   const [form, setForm] = useState(blankForm)
   const [editing, setEditing] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  // Line items available on the selected customer order, and which of them
+  // (with what quantity) go on THIS supplier's purchase order.
+  const [availableItems, setAvailableItems] = useState([])
+  const [itemsLoading, setItemsLoading] = useState(false)
+  const [lineItems, setLineItems] = useState({})
 
   const progressMap = (status) => {
   switch (status) {
@@ -103,6 +108,36 @@ export default function PurchaseOrdersPage() {
   const customerOrders = data?.customerOrders || []
   const suppliers = data?.suppliers || []
 
+  // Load the chosen customer order's products so the user can pick which ones
+  // this supplier is being ordered from (DMC splits an order across 3–5 suppliers).
+  useEffect(() => {
+    let active = true
+    const loadItems = async () => {
+      if (!form.order_id) { setAvailableItems([]); setLineItems({}); return }
+      setItemsLoading(true)
+      const { data: items, error } = await supabase
+        .from('customer_order_items')
+        .select('id, product_id, quantity_ordered, products(product_name, sku)')
+        .eq('order_id', form.order_id)
+      if (!active) return
+      if (error) toast?.show(error.message, 'error')
+      const rows = items || []
+      setAvailableItems(rows)
+      // Default: every product selected at the ordered quantity.
+      setLineItems(Object.fromEntries(
+        rows.map((i) => [i.product_id, { checked: true, qty: String(i.quantity_ordered) }]),
+      ))
+      setItemsLoading(false)
+    }
+    loadItems()
+    return () => { active = false }
+  }, [form.order_id, toast])
+
+  const selectedLineItems = availableItems
+    .filter((i) => lineItems[i.product_id]?.checked)
+    .map((i) => ({ product_id: i.product_id, quantity_ordered: Number(lineItems[i.product_id]?.qty) }))
+    .filter((i) => Number.isFinite(i.quantity_ordered) && i.quantity_ordered > 0)
+
   const openEdit = (po) => {
     setEditing(po)
     setForm({
@@ -136,6 +171,17 @@ const save = async (event) => {
       throw new Error('Select a supplier before creating a purchase order.')
     }
 
+    // A purchase order with no products cannot be dispatched or received —
+    // never create an empty one.
+    if (!editing) {
+      if (availableItems.length === 0) {
+        throw new Error('That customer order has no products yet, so there is nothing to purchase.')
+      }
+      if (selectedLineItems.length === 0) {
+        throw new Error('Select at least one product (with a quantity above zero) for this supplier.')
+      }
+    }
+
     const payload = Object.fromEntries(
       Object.entries(form).filter(([, value]) => value !== '')
     )
@@ -154,27 +200,23 @@ const save = async (event) => {
       // Create Purchase Order
       result = await createRecord('purchase_orders', payload)
 
-      // Copy customer order items into purchase order items
-      const { data: orderItems, error: orderItemsError } = await supabase
-        .from('customer_order_items')
-        .select('product_id, quantity_ordered')
-        .eq('order_id', form.order_id)
+      // Only the products chosen for THIS supplier — an order is split across
+      // several suppliers, so a PO must not carry the whole order's items.
+      const { error: poItemsError } = await supabase
+        .from('purchase_order_items')
+        .insert(
+          selectedLineItems.map((item) => ({
+            purchase_order_id: result.data.id,
+            product_id: item.product_id,
+            quantity_ordered: item.quantity_ordered,
+            quantity_received: 0,
+          }))
+        )
 
-      if (orderItemsError) throw orderItemsError
-
-      if (orderItems?.length) {
-        const { error: poItemsError } = await supabase
-          .from('purchase_order_items')
-          .insert(
-            orderItems.map(item => ({
-              purchase_order_id: result.data.id,
-              product_id: item.product_id,
-              quantity_ordered: item.quantity_ordered,
-              quantity_received: 0,
-            }))
-          )
-
-        if (poItemsError) throw poItemsError
+      if (poItemsError) {
+        // Don't leave an empty PO behind if the items failed to save.
+        await deleteRecord('purchase_orders', result.data.id).catch(() => {})
+        throw poItemsError
       }
 
       // Send email
@@ -336,6 +378,51 @@ const save = async (event) => {
                 ))}
               </select>
             </label>
+            {!editing && (
+              <div>
+                <p className="text-sm font-medium text-gray-700">Products for this supplier</p>
+                <p className="text-xs text-gray-400 mb-2">
+                  Tick only the products this supplier is providing — an order is usually split across several suppliers.
+                </p>
+                {!form.order_id ? (
+                  <p className="text-sm text-gray-400 border border-gray-200 rounded px-3 py-2 bg-gray-50">Select a customer order first.</p>
+                ) : itemsLoading ? (
+                  <p className="text-sm text-gray-400 border border-gray-200 rounded px-3 py-2 bg-gray-50">Loading products...</p>
+                ) : availableItems.length === 0 ? (
+                  <p className="text-sm text-gray-500 border border-gray-200 rounded px-3 py-2 bg-gray-50">
+                    This customer order has no products, so no purchase order can be created for it.
+                  </p>
+                ) : (
+                  <div className="border border-gray-200 rounded divide-y divide-gray-100">
+                    {availableItems.map((item) => {
+                      const row = lineItems[item.product_id] || { checked: false, qty: '0' }
+                      return (
+                        <div key={item.id} className="flex items-center gap-3 px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={row.checked}
+                            onChange={(e) => setLineItems({ ...lineItems, [item.product_id]: { ...row, checked: e.target.checked } })}
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-900">{item.products?.product_name || 'Product'}</p>
+                            <p className="text-xs text-gray-400">Ordered by customer: {item.quantity_ordered}</p>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={row.qty}
+                            disabled={!row.checked}
+                            onChange={(e) => setLineItems({ ...lineItems, [item.product_id]: { ...row, qty: e.target.value } })}
+                            className="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-black disabled:bg-gray-50 disabled:text-gray-400"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             <label className="block text-sm font-medium text-gray-700">Expected Delivery
               <input type="date" value={form.expected_delivery_date} onChange={(event) => setForm({ ...form, expected_delivery_date: event.target.value })} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-gray-400" />
             </label>
