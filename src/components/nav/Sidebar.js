@@ -153,6 +153,7 @@ const NAV = {
         title: 'Analytics',
         items: [
           { label: 'Executive Dashboard', href: '/management/analytics' },
+          { label: 'Import History', href: '/management/analytics/import' },
         ],
       },
       {
