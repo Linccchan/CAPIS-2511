@@ -9,6 +9,9 @@ export default function LogDeliveryPage() {
   const router = useRouter()
 
   const [purchaseOrders, setPurchaseOrders] = useState([])
+  // Dispatches the supplier has logged that the warehouse has not confirmed
+  // yet. These POs are still 'sent', so they never appeared in the list below.
+  const [awaitingReceipt, setAwaitingReceipt] = useState([])
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedPO, setSelectedPO] = useState(null)
@@ -40,7 +43,26 @@ export default function LogDeliveryPage() {
         return
       }
 
-      if (active) setPurchaseOrders(data ?? [])
+      const { data: pending } = await supabase
+        .from('supplier_deliveries')
+        .select(`
+          id,
+          delivery_date,
+          purchase_orders(
+            id,
+            po_number,
+            status,
+            suppliers(supplier_name),
+            customer_orders(order_number)
+          )
+        `)
+        .eq('delivery_status', 'pending_confirmation')
+        .order('delivery_date', { ascending: false })
+
+      if (active) {
+        setPurchaseOrders(data ?? [])
+        setAwaitingReceipt((pending ?? []).filter((d) => d.purchase_orders))
+      }
     }
 
     load()
@@ -184,6 +206,47 @@ async function handleConfirmReceipt() {
           style={{ width: 260 }}
         />
       </div>
+
+      {/* Supplier has dispatched, warehouse has not confirmed receipt yet.
+          These POs are still 'sent', so they are not in the table below. */}
+      {awaitingReceipt.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
+            Awaiting your confirmation ({awaitingReceipt.length})
+          </div>
+          <div className="card">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th className="table-th">PO #</th>
+                  <th className="table-th">Order</th>
+                  <th className="table-th">Supplier</th>
+                  <th className="table-th">Dispatched</th>
+                  <th className="table-th">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {awaitingReceipt.map((d) => (
+                  <tr key={d.id}>
+                    <td className="table-td"><span className="td-primary">{d.purchase_orders.po_number}</span></td>
+                    <td className="table-td">{d.purchase_orders.customer_orders?.order_number || '—'}</td>
+                    <td className="table-td">{d.purchase_orders.suppliers?.supplier_name || '—'}</td>
+                    <td className="table-td">{d.delivery_date || '—'}</td>
+                    <td className="table-td">
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => router.push(`/warehouse/log-delivery/${d.purchase_orders.id}`)}
+                      >
+                        Confirm receipt
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
