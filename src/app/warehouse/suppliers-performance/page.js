@@ -77,7 +77,7 @@ export default function SuppliersPage() {
                     suppliers.reduce(
                     (sum, s) =>
                         sum +
-                        ((s.supplier_performance?.[0]?.reliability_score ?? 0) * 100),
+                        (s.supplier_performance?.[0]?.reliability_score ?? 0),
                     0
                     ) / suppliers.length
                 )
@@ -128,8 +128,7 @@ export default function SuppliersPage() {
             data={suppliers.map((supplier) => ({
                 name: supplier.supplier_name,
                 reliability:
-                (supplier.supplier_performance?.[0]?.reliability_score ?? 0) *
-                100,
+                supplier.supplier_performance?.[0]?.reliability_score ?? 0,
             }))}
             >
             <CartesianGrid strokeDasharray="3 3" />
