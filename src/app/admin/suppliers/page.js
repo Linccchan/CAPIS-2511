@@ -275,10 +275,12 @@ console.log("selectedSupplier.id:", selectedSupplier?.id)
   }
 
 
+  // reliability_score is stored 0-100, matching the analytics importer and
+  // reliabilityTier() in src/lib/analytics/predictions.js.
   const reliabilityLabel = (score) => {
     if (!score) return { label: 'N/A', cls: 'badge-gray' }
-    if (score >= 0.85) return { label: 'Good', cls: 'badge-green' }
-    if (score >= 0.7) return { label: 'Fair', cls: 'badge-yellow' }
+    if (score >= 85) return { label: 'Good', cls: 'badge-green' }
+    if (score >= 70) return { label: 'Fair', cls: 'badge-yellow' }
     return { label: 'At risk', cls: 'badge-red' }
   }
 
@@ -705,7 +707,7 @@ console.log("selectedSupplier.id:", selectedSupplier?.id)
                       <p className="text-lg font-semibold">
                         {Math.round(
                           selectedSupplier.supplier_performance[0]
-                            .reliability_score * 100
+                            .reliability_score
                         )}
                         %
                       </p>
@@ -868,15 +870,15 @@ console.log("selectedSupplier.id:", selectedSupplier?.id)
     </label>
 
     <span className="rounded bg-gray-100 px-2 py-1 text-sm font-semibold">
-      {Math.round((performanceForm.reliability_score || 0) * 100)}%
+      {Math.round(performanceForm.reliability_score || 0)}%
     </span>
   </div>
 
   <input
     type="range"
     min="0"
-    max="1"
-    step="0.01"
+    max="100"
+    step="1"
     value={performanceForm.reliability_score}
     onChange={(e) =>
       setPerformanceForm({
