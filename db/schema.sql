@@ -84,7 +84,8 @@ create table products (
   created_at          timestamptz default now(),
   unit_cbm            real,
   unit_weight_kg      real,
-  is_available        boolean not null default true
+  is_available        boolean not null default true,
+  image_url           text
 );
 
 -- ---------- Module 1: Customer Interaction -----------------------------------

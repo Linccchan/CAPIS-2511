@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabaseClient'
 
 const TABLES = [
   'customers',
+  'customer_locations',
   'suppliers',
   'customer_orders',
   'customer_order_items',
@@ -15,6 +16,7 @@ const TABLES = [
 
 const ID_COLUMNS = {
   customers: ['id', 'uuid', 'customer_id'],
+  customer_locations: ['id', 'uuid', 'customer_location_id', 'location_id'],
   suppliers: ['id', 'uuid', 'supplier_id', 'vendor_id'],
   customer_orders: ['id', 'uuid', 'customer_order_id', 'order_id'],
   customer_order_items: ['id', 'uuid', 'customer_order_item_id', 'order_item_id'],
@@ -85,6 +87,7 @@ export async function fetchOrderManagementData() {
 
 export function buildOrderManagementData(raw) {
   const customers = raw.customers || []
+  const customerLocations = raw.customer_locations || []
   const suppliers = raw.suppliers || []
   const customerOrders = raw.customer_orders || []
   const customerOrderItems = raw.customer_order_items || []
@@ -110,6 +113,7 @@ export function buildOrderManagementData(raw) {
   }))
 
   const customerById = new Map(normalizedCustomers.map((customer) => [String(customer.id), customer]))
+  const customerLocationById = new Map(customerLocations.map((location) => [String(idOf(location, 'customer_locations')), location]))
   const supplierById = new Map(normalizedSuppliers.map((supplier) => [String(supplier.id), supplier]))
   const customerOrderById = new Map(customerOrders.map((order) => [String(idOf(order, 'customer_orders')), order]))
   const productById = new Map(products.map((product) => [String(idOf(product, 'products')), product]))
@@ -200,6 +204,7 @@ export function buildOrderManagementData(raw) {
   const normalizedCustomerOrders = customerOrders.map((order) => {
     const orderId = idOf(order, 'customer_orders')
     const customer = customerById.get(String(first(order, ['customer_id'])))
+    const deliveryLocation = customerLocationById.get(String(first(order, ['delivery_location_id'])))
     const items = (orderItemsByCustomerOrder.get(String(orderId)) || []).map((item) => {
       const product = productById.get(String(first(item, ['product_id'])))
       const quantity = numberOf(first(item, ['quantity_ordered', 'quantity', 'ordered_quantity', 'qty'], 0))
@@ -210,6 +215,7 @@ export function buildOrderManagementData(raw) {
         id: idOf(item, 'customer_order_items'),
         idColumn: idColumnOf(item, 'customer_order_items'),
         productName: first(product, ['name', 'product_name', 'description'], first(item, ['product_name', 'description'], 'Product')),
+        notes: first(item, ['notes'], ''),
         quantity,
         unitPrice,
         total: quantity * unitPrice,
@@ -248,6 +254,11 @@ export function buildOrderManagementData(raw) {
       customerName: first(customer, ['name', 'customer_name', 'company_name'], first(order, ['customer_name'], 'Customer')),
       contactInfo: first(customer, ['contact_info', 'email', 'phone', 'contact_number'], 'Not set'),
       orderDate: first(order, ['order_date', 'created_at', 'date']),
+      preferredShipDate: first(order, ['preferred_ship_date']),
+      specialInstructions: first(order, ['special_instructions'], ''),
+      deliveryLocationLabel: first(deliveryLocation, ['label'], 'Not set'),
+      deliveryAddress: first(deliveryLocation, ['address'], ''),
+      deliveryCountry: first(deliveryLocation, ['country'], first(order, ['destination_country'], 'Not set')),
       expectedShipmentDate: first(order, ['expected_shipment_date', 'estimated_ready_date', 'shipment_date', 'required_date']),
       status: normalizeStatus(first(order, ['status'], completionStatus)),
       totalItems: items.reduce((sum, item) => sum + item.quantity, 0),

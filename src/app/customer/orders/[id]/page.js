@@ -233,12 +233,18 @@ export default function OrderDetail() {
             <span className={`px-3 py-1 rounded text-xs font-medium ${getStatusStyle(order.status)}`}>
               {formatStatus(order.status)}
             </span>
-            <button
-              onClick={() => router.push(`/customer/pfi/${order.id}`)}
-              className="text-sm border border-gray-300 px-3 py-2 rounded hover:bg-gray-50"
-            >
-              Download PFI
-            </button>
+            {billing ? (
+              <button
+                onClick={() => router.push(`/customer/pfi/${order.id}`)}
+                className="text-sm border border-gray-300 px-3 py-2 rounded hover:bg-gray-50"
+              >
+                Download PFI
+              </button>
+            ) : (
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded">
+                PFI not yet available
+              </span>
+            )}
           </div>
         </div>
 
@@ -248,7 +254,7 @@ export default function OrderDetail() {
           <div className="flex items-center gap-2 mb-4 text-xs">
             {STEPS.map((step, i) => (
               <div key={step} className="flex items-center gap-2">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold ${i + 1 < currentStep ? 'bg-black text-white' : i + 1 === currentStep ? 'border-2 border-black text-black' : 'border border-gray-300 text-gray-400'}`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold ${i + 1 <= currentStep ? 'bg-black text-white' : 'border border-gray-300 text-gray-400'}`}>
                   {i + 1 < currentStep ? '✓' : i + 1}
                 </div>
                 <span className={i + 1 <= currentStep ? 'text-gray-900 font-medium' : 'text-gray-400'}>{step}</span>

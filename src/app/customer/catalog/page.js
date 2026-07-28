@@ -189,8 +189,19 @@ export default function ProductCatalog() {
               <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
                 {items.map((product) => (
                   <div key={product.id} className="flex items-center gap-4 p-4">
-                    <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400 flex-shrink-0">
-                      [Product image]
+                    <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex items-center justify-center text-xs text-gray-400 flex-shrink-0">
+                      {product.image_url ? (
+                        // The bucket hostname is configured at runtime, so a native image is intentional.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={product.image_url}
+                          alt={product.product_name}
+                          className="w-full h-full object-contain"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span>No image</span>
+                      )}
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-sm text-gray-900">{product.product_name}</p>

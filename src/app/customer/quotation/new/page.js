@@ -21,6 +21,7 @@ export default function RequestQuotation() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [newOrderId, setNewOrderId] = useState(null)
+  const [newOrderNumber, setNewOrderNumber] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -102,9 +103,10 @@ export default function RequestQuotation() {
     syncStorage(next)
   }
 
-  const updateQuantity = (product_id, qty) => {
+  const updateQuantity = (product_id, value) => {
+    const quantity = value === '' ? '' : Math.max(1, parseInt(value, 10) || 1)
     setSelectedItems(selectedItems.map(i =>
-      i.product_id === product_id ? { ...i, quantity_ordered: qty } : i
+      i.product_id === product_id ? { ...i, quantity_ordered: quantity } : i
     ))
   }
 
@@ -120,15 +122,19 @@ export default function RequestQuotation() {
     syncStorage(next)
   }
 
-  const totalCBM = selectedItems.reduce((sum, i) => sum + ((i.unit_cbm || 0) * i.quantity_ordered), 0)
-  const totalWeight = selectedItems.reduce((sum, i) => sum + ((i.unit_weight_kg || 0) * i.quantity_ordered), 0)
-  const totalQty = selectedItems.reduce((sum, i) => sum + i.quantity_ordered, 0)
+  const totalCBM = selectedItems.reduce((sum, i) => sum + ((i.unit_cbm || 0) * (Number(i.quantity_ordered) || 0)), 0)
+  const totalWeight = selectedItems.reduce((sum, i) => sum + ((i.unit_weight_kg || 0) * (Number(i.quantity_ordered) || 0)), 0)
+  const totalQty = selectedItems.reduce((sum, i) => sum + (Number(i.quantity_ordered) || 0), 0)
 
   const selectedLocation = locations.find((l) => l.id === selectedLocationId)
   const today = new Date().toISOString().split('T')[0]
 
   const handleSubmit = async () => {
     if (!customer || selectedItems.length === 0 || !selectedLocation) return
+    if (selectedItems.some((item) => !Number.isInteger(Number(item.quantity_ordered)) || Number(item.quantity_ordered) < 1)) {
+      alert('Each product quantity must be at least 1.')
+      return
+    }
     if (preferredDate && preferredDate < today) {
       alert('Preferred ship date cannot be in the past.')
       return
@@ -189,6 +195,7 @@ export default function RequestQuotation() {
 
     sessionStorage.removeItem(STORAGE_KEY)
     setNewOrderId(order.id)
+    setNewOrderNumber(order.order_number)
     setSubmitted(true)
     setSubmitting(false)
   }
@@ -204,13 +211,29 @@ export default function RequestQuotation() {
       <div className="bg-white rounded-lg border border-gray-200 p-10 text-center max-w-md">
         <div className="text-4xl mb-4">✓</div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">Quotation request submitted</h2>
-        <p className="text-sm text-gray-500 mb-6">DMC will review your request and prepare a pro forma invoice. You will be notified once it is ready.</p>
-        <button
-          onClick={() => router.push('/customer/dashboard')}
-          className="bg-black text-white px-6 py-2 rounded text-sm hover:bg-gray-800"
-        >
-          Back to dashboard
-        </button>
+        <p className="text-sm text-gray-500 mb-4">DMC will review your request and prepare a pro forma invoice. You will be notified once it is ready.</p>
+        {newOrderNumber && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-6">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Quotation reference</p>
+            <p className="text-lg font-bold text-gray-900">{newOrderNumber}</p>
+          </div>
+        )}
+        <div className="flex justify-center gap-3">
+          {newOrderId && (
+            <button
+              onClick={() => router.push(`/customer/quotation/${newOrderId}`)}
+              className="bg-black text-white px-5 py-2 rounded text-sm hover:bg-gray-800"
+            >
+              View request
+            </button>
+          )}
+          <button
+            onClick={() => router.push('/customer/dashboard')}
+            className="border border-gray-300 text-gray-700 px-5 py-2 rounded text-sm hover:bg-gray-50"
+          >
+            Back to dashboard
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -309,7 +332,11 @@ export default function RequestQuotation() {
                             type="number"
                             min="1"
                             value={item.quantity_ordered}
-                            onChange={(e) => updateQuantity(item.product_id, parseInt(e.target.value) || 1)}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => updateQuantity(item.product_id, e.target.value)}
+                            onBlur={() => {
+                              if (item.quantity_ordered === '') updateQuantity(item.product_id, '1')
+                            }}
                             className="w-20 border border-gray-300 rounded px-2 py-1 text-sm text-black"
                           />
                         </td>
