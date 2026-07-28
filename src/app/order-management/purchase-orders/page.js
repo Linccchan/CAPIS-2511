@@ -31,49 +31,6 @@ export default function PurchaseOrdersPage() {
   const [itemsLoading, setItemsLoading] = useState(false)
   const [lineItems, setLineItems] = useState({})
 
-  const progressMap = (status) => {
-  switch (status) {
-    case 'Pending':
-    case 'pending':
-      return 0
-
-    case 'Sent':
-    case 'sent':
-      return 10
-
-    case 'Confirmed':
-    case 'confirmed':
-      return 20
-
-    case 'Partially Delivered':
-    case 'partially_delivered':
-      return 30
-
-    case 'Delivered':
-    case 'delivered':
-      return 40
-
-    case 'Pending Sticker / Label':
-      return 60
-
-    case 'Staging':
-    case 'staging':
-      return 80
-
-    case 'Ready for Shipment':
-    case 'Ready For Shipment':
-    case 'ready_for_shipment':
-      return 90
-
-    case 'Completed':
-    case 'completed':
-      return 100
-
-    default:
-      return 0
-  }
-}
-
   const refresh = async () => {
     try {
       setData(await fetchOrderManagementData())
@@ -305,7 +262,7 @@ const save = async (event) => {
                       <td className="py-3 pr-4"><Badge tone={statusTone(po.status)}>{po.status}</Badge></td>
 
                       <td className="py-3 pr-4">
-                        <ProgressBar value={progressMap(po.status)} />
+                        <ProgressBar value={po.progress} />
                       </td>         
                         <td className="py-3">
                           <div className="flex gap-2">

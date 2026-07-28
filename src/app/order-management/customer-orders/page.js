@@ -164,9 +164,11 @@ export default function CustomerOrdersPage() {
                       <td className="py-3">
                         <div className="flex gap-2">
                           <Link href={`/order-management/customer-orders/${order.id}`} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">View</Link>
-                          {order.status.toLowerCase() === 'submitted' && (
-                            <Link href={`/order-management/customer-orders/${order.id}/pfi`} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">PFI</Link>
-                          )}
+                          {order.billing ? (
+                            <Link href={`/customer/pfi/${order.id}`} target="_blank" rel="noreferrer" className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">View PFI</Link>
+                          ) : order.status.toLowerCase() === 'submitted' ? (
+                            <Link href={`/order-management/customer-orders/${order.id}/pfi`} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">Build PFI</Link>
+                          ) : null}
                           <button onClick={() => openEdit(order)} className="rounded border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">Edit</button>
                           <button onClick={() => setDeleteTarget(order)} className="rounded bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700">Delete</button>
                         </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { Badge, Button, Card, EmptyState, OrderShell, TableSkeleton, useToast } from '@/components/order-management/ui'
@@ -13,7 +14,7 @@ export default function BillingPayments() {
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from('billings')
-      .select('*, customer_orders(id, order_number, status, customers(company_name)), payments(*)')
+      .select('*, customer_orders(id, order_number, quotation_number, status, customers(company_name)), payments(*)')
       .order('created_at', { ascending: false })
 
     if (error) toast?.show(error.message, 'error')
@@ -115,7 +116,7 @@ export default function BillingPayments() {
       <div className="space-y-6">
 
         <Card title={`Payment verification queue (${pendingPayments.length})`}>
-          {loading ? <TableSkeleton cols={7} /> : pendingPayments.length === 0 ? (
+          {loading ? <TableSkeleton cols={10} /> : pendingPayments.length === 0 ? (
             <EmptyState title="No payments awaiting verification" description="Customer payment records appear here as soon as they are submitted." />
           ) : (
             <div className="overflow-x-auto">
@@ -127,7 +128,9 @@ export default function BillingPayments() {
                     <th className="py-3 pr-4">Type</th>
                     <th className="py-3 pr-4">Bank</th>
                     <th className="py-3 pr-4">Amount</th>
+                    <th className="py-3 pr-4">Required 50%</th>
                     <th className="py-3 pr-4">Date</th>
+                    <th className="py-3 pr-4">PFI</th>
                     <th className="py-3 pr-4">Proof</th>
                     <th className="py-3">Action</th>
                   </tr>
@@ -135,12 +138,35 @@ export default function BillingPayments() {
                 <tbody className="divide-y divide-gray-100">
                   {pendingPayments.map((p) => (
                     <tr key={p.id}>
-                      <td className="py-3 pr-4 font-medium">{p.billing.customer_orders?.order_number}</td>
+                      <td className="py-3 pr-4">
+                        <Link
+                          href={`/order-management/customer-orders/${p.billing.customer_orders?.id}`}
+                          className="font-medium text-gray-900 hover:underline"
+                        >
+                          {p.billing.customer_orders?.order_number}
+                        </Link>
+                        {p.billing.customer_orders?.quotation_number && (
+                          <div className="mt-0.5 text-xs text-gray-500">
+                            {p.billing.customer_orders.quotation_number}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 pr-4 text-gray-600">{p.billing.customer_orders?.customers?.company_name || '—'}</td>
                       <td className="py-3 pr-4"><Badge tone="gray">{p.payment_type === 'down_payment' ? 'Down payment' : 'Balance'}</Badge></td>
                       <td className="py-3 pr-4 text-gray-600">{p.bank_name}</td>
                       <td className="py-3 pr-4 font-medium">{money(p.amount)}</td>
+                      <td className="py-3 pr-4 font-medium">{money(p.billing.down_payment_required)}</td>
                       <td className="py-3 pr-4 text-gray-600">{formatDate(p.payment_date)}</td>
+                      <td className="py-3 pr-4">
+                        <Link
+                          href={`/customer/pfi/${p.billing.customer_orders?.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-medium text-gray-900 hover:underline"
+                        >
+                          Open {p.billing.billing_number}
+                        </Link>
+                      </td>
                       <td className="py-3 pr-4">
                         <button onClick={() => viewProof(p)} className="text-sm font-medium text-gray-900 hover:underline">
                           View slip
@@ -188,8 +214,21 @@ export default function BillingPayments() {
                     const [balLabel, balTone] = balStatus(b)
                     return (
                       <tr key={b.id}>
-                        <td className="py-3 pr-4 font-medium">{b.billing_number}</td>
-                        <td className="py-3 pr-4 text-gray-600">{b.customer_orders?.order_number}</td>
+                        <td className="py-3 pr-4 font-medium">
+                          <Link
+                            href={`/customer/pfi/${b.customer_orders?.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:underline"
+                          >
+                            {b.billing_number}
+                          </Link>
+                        </td>
+                        <td className="py-3 pr-4 text-gray-600">
+                          <Link href={`/order-management/customer-orders/${b.customer_orders?.id}`} className="hover:underline">
+                            {b.customer_orders?.order_number}
+                          </Link>
+                        </td>
                         <td className="py-3 pr-4 text-gray-600">{b.customer_orders?.customers?.company_name || '—'}</td>
                         <td className="py-3 pr-4 font-medium">{money(b.total_amount)}</td>
                         <td className="py-3 pr-4">{money(b.down_payment_required)}</td>

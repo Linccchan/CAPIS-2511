@@ -201,6 +201,10 @@ export default function QuotationDetail() {
   )
 
   const currentStep = getStepNumber(order.status)
+  const hasOrderReference = order.order_number?.startsWith('ORD-')
+  const primaryReference = hasOrderReference
+    ? `Order ${order.order_number}`
+    : `Quotation ${order.quotation_number || order.order_number}`
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -246,8 +250,9 @@ export default function QuotationDetail() {
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Quotation {order.quotation_number || order.order_number}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{primaryReference}</h1>
             <p className="text-sm text-gray-500">
+              {hasOrderReference && <>Quotation {order.quotation_number} · </>}
               Submitted {order.order_date ? new Date(order.order_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'} · {order.destination_country} · {orderItems.length} products
             </p>
           </div>
@@ -474,8 +479,16 @@ export default function QuotationDetail() {
           {/* Right — Quotation Details */}
           <div className="w-64 flex-shrink-0">
             <div className="bg-white rounded-lg border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 mb-4">Quotation details</h2>
+              <h2 className="font-semibold text-gray-900 mb-4">
+                {hasOrderReference ? 'Order & quotation details' : 'Quotation details'}
+              </h2>
               <div className="space-y-2 text-sm">
+                {hasOrderReference && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Order #</span>
+                    <span className="font-medium">{order.order_number}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Quotation #</span>
                   <span className="font-medium">{order.quotation_number || order.order_number}</span>
