@@ -71,6 +71,27 @@ const isCompleteStatus = (value) => {
   return ['complete', 'completed', 'delivered', 'ready for shipment', 'fulfilled'].includes(status)
 }
 
+export const purchaseOrderProgress = (status, fallback = 0) => {
+  const normalized = String(status || '')
+    .trim()
+    .toLowerCase()
+    .replaceAll('_', ' ')
+
+  const progressByStatus = {
+    pending: 0,
+    sent: 10,
+    confirmed: 20,
+    'partially delivered': 30,
+    delivered: 40,
+    'pending sticker / label': 60,
+    staging: 80,
+    'ready for shipment': 90,
+    completed: 100,
+  }
+
+  return progressByStatus[normalized] ?? fallback
+}
+
 const readTable = async (tableName) => {
   const { data, error } = await supabase.from(tableName).select('*')
   if (error) {
@@ -134,9 +155,9 @@ export function buildOrderManagementData(raw) {
   })
 
   const normalizedPurchaseItems = purchaseOrderItems.map((item) => {
-    const orderedQuantity = numberOf(first(item, ['ordered_quantity', 'quantity', 'qty'], 0))
+    const orderedQuantity = numberOf(first(item, ['quantity_ordered', 'ordered_quantity', 'quantity', 'qty'], 0))
     const deliveredQuantity = numberOf(
-      first(item, ['delivered_quantity', 'received_quantity', 'fulfilled_quantity'], deliveredByPoItem.get(String(idOf(item))) || 0),
+      first(item, ['quantity_received', 'delivered_quantity', 'received_quantity', 'fulfilled_quantity'], deliveredByPoItem.get(String(idOf(item))) || 0),
     )
     const remainingQuantity = Math.max(orderedQuantity - deliveredQuantity, 0)
     const product = productById.get(String(first(item, ['product_id'])))
@@ -167,13 +188,14 @@ export function buildOrderManagementData(raw) {
     const items = purchaseItemsByPo.get(String(poId)) || []
     const ordered = items.reduce((sum, item) => sum + item.orderedQuantity, 0)
     const delivered = items.reduce((sum, item) => sum + item.deliveredQuantity, 0)
-    const progress = ordered > 0 ? Math.min(Math.round((delivered / ordered) * 100), 100) : 0
+    const deliveryProgress = ordered > 0 ? Math.min(Math.round((delivered / ordered) * 100), 100) : 0
     const supplierId = first(po, ['supplier_id', 'vendor_id'])
     const supplierRecord = supplierById.get(String(supplierId))
     const supplier = first(supplierRecord, ['supplier_name', 'name', 'company_name', 'vendor_name'], first(po, ['supplier_name', 'supplier', 'vendor_name'], 'Supplier'))
     const status = normalizeStatus(
-      first(po, ['status'], progress >= 100 ? 'Delivered' : progress > 0 ? 'Partially Delivered' : 'Pending'),
+      first(po, ['status'], deliveryProgress >= 100 ? 'Delivered' : deliveryProgress > 0 ? 'Partially Delivered' : 'Pending'),
     )
+    const progress = purchaseOrderProgress(status, deliveryProgress)
     const customerOrderId = first(po, ['customer_order_id', 'order_id'])
     const customerOrder = customerOrderById.get(String(customerOrderId))
 
