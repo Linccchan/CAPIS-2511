@@ -45,12 +45,11 @@
 -- Captured here:   tables, columns, data types, NOT NULL, defaults,
 --                  primary keys (all `id`), foreign keys, CHECK constraints
 --                  (see the block at the end of this file).
--- NOT captured here (kept in the live DB — regenerate if you need them):
---   * UNIQUE constraints and indexes
+-- NOTE: the two bullets below applied to db/schema.sql as a standalone file.
+-- In THIS file the helper functions and policies ARE included — see Section 2
+-- (functions), Section 3 (enable RLS), and Section 4 (91 policies).
+--   * UNIQUE constraints and indexes — still not captured; see the closing note
 --   * FK ON DELETE / ON UPDATE actions (default assumed: NO ACTION)
---   * Row-Level Security policies + helper functions
---     (has_role, current_user_role, customer_can_read_order, ...)
---     — RLS is ENABLED on every table below; see db/SCHEMA.md for policy state.
 -- Statuses are `text` (no Postgres enums), but every status/role/type column
 -- is vocabulary-enforced by a CHECK constraint — see the end of this file.
 -- =============================================================================
