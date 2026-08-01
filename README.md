@@ -11,7 +11,8 @@ payment verification, and shipment-readiness prediction.
 
 - **Frontend:** Next.js (App Router, JavaScript) + React, TailwindCSS
 - **Backend / DB:** Supabase (PostgreSQL, Auth, Row-Level Security)
-- **Analytics:** TensorFlow.js (on-device predictions)
+- **Analytics:** explainable statistical heuristic computed in-browser from
+  DMC's own purchase-order history (no external feeds, no trained model)
 - **Hosting:** Vercel
 - **ERP integration:** Odoo via JSON-RPC (accounting/billing sync)
 
